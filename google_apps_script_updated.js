@@ -367,6 +367,15 @@ logEvent(username, 'create_role', roleName, { permissions: permissionsInput });
     const newRow  = headers.map(h => body[h] !== undefined ? body[h] : '');
     sheet.appendRow(newRow);
 
+    // อัพโหลดไฟล์ใบสูติบัตรไปยัง Google Drive
+    if (body.birthCertFilesBase64 && body.birthCertFiles) {
+      try {
+        uploadBirthCertFiles(body.ref, body.birthCertFilesBase64, body.birthCertFiles);
+      } catch (uploadErr) {
+        Logger.log('Birth cert upload error: ' + uploadErr.toString());
+      }
+    }
+
     logEvent('public', 'booking_submitted', body.ref || '', { visitorName: body.visitorName, prisonerName: body.prisonerName, visitDate: body.visitDate }, 'success');
 
     // Optional email notification (kept from original)
@@ -642,7 +651,8 @@ function ensureHeaders(sheet) {
     'religion','allergy','extraVisitorReligions','extraVisitorAllergies',
     'extraVisitorNames','visitorApproved','extraVisitorApproved',
     'prisonerName','prisonerId','wing','visitDate','visitDateISO',
-    'visitorCount','totalPersons','total','adultCount','child5to8Count','childUnder5Count','status','slipImage'
+    'visitorCount','totalPersons','total','adultCount','child5to8Count','childUnder5Count',
+    'status','slipImage','birthCertFiles','birthCertFilesBase64'
   ];
   sheet.appendRow(headers);
   const headerRange = sheet.getRange(1, 1, 1, headers.length);
@@ -651,7 +661,9 @@ function ensureHeaders(sheet) {
   headerRange.setFontColor('#ffffff');
   sheet.setFrozenRows(1);
   const slipCol = headers.indexOf('slipImage') + 1;
+  const bcCol = headers.indexOf('birthCertFiles') + 1;
   if (slipCol > 0) sheet.hideColumns(slipCol);
+  if (bcCol > 0) sheet.hideColumns(bcCol);
 }
 
 // ===== SLIP TO DRIVE =====
@@ -685,6 +697,58 @@ function saveSlipToDrive(ref, base64Data, mimeTypeOverride, fileNameOverride) {
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   const fileId = file.getId();
   return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w1200';
+}
+
+// ===== BIRTH CERT TO DRIVE =====
+function uploadBirthCertFiles(ref, base64Data, fileNames) {
+  const folderName = 'BirthCertificates';
+  const folderIter = DriveApp.getFoldersByName(folderName);
+  const folder = folderIter.hasNext() ? folderIter.next() : DriveApp.createFolder(folderName);
+
+  const base64Array = base64Data.split('~|~');
+  const nameArray = fileNames.split(';');
+  const urls = [];
+
+  base64Array.forEach((b64, idx) => {
+    if (!b64 || !b64.trim()) return;
+    const fileName = (nameArray[idx] || ('birthcert_' + (idx + 1) + '.jpg')).trim();
+    
+    // Decode base64
+    const rawBase64 = b64.replace(/^data:([a-zA-Z0-9+\/]+\/[a-zA-Z0-9+\/]+);base64,/, '');
+    const matches = b64.match(/^data:([a-zA-Z0-9+\/]+\/[a-zA-Z0-9+\/]+);base64,(.+)$/);
+    let mimeType = 'image/jpeg';
+    let cleanBase64 = rawBase64;
+    
+    if (matches) {
+      mimeType = matches[1];
+      cleanBase64 = matches[2];
+    }
+    
+    const blob = Utilities.newBlob(Utilities.base64Decode(cleanBase64), mimeType, fileName);
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    urls.push(file.getUrl());
+  });
+
+  // Update sheet with Drive URLs
+  const sheet = getMainSheet();
+  const data = sheet.getDataRange().getValues();
+  const refIdx = data[0].indexOf('ref');
+  const bcUrlIdx = data[0].indexOf('birthCertFiles');
+  const bcBase64Idx = data[0].indexOf('birthCertFilesBase64');
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][refIdx]).trim() === String(ref).trim()) {
+      if (bcUrlIdx >= 0) {
+        sheet.getRange(i + 1, bcUrlIdx + 1).setValue(urls.join(';;'));
+      }
+      // ล้าง base64 ออกจาก sheet เพื่อประหย Особенности
+      if (bcBase64Idx >= 0) {
+        sheet.getRange(i + 1, bcBase64Idx + 1).setValue('');
+      }
+      break;
+    }
+  }
 }
 
 // ===== PRISONER MASTER DATABASE =====

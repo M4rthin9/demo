@@ -150,10 +150,15 @@ function updateExtraVisitors() {
       '</div>' +
       '<div class="form-group"><label>ความสัมพันธ์ <span style=\"color:var(--red)\">*</span></label>' +
       '<select id="extraVisitorRelation' + i + '">' + relOpts + '</select></div>' +
-      '<div class="form-group" id="ageGroup' + i + '" style="display:none;margin-top:6px;">' +
-      '<label>อายุ (ปี) <span style=\"color:var(--red)\">*</span></label>' +
-      '<input type="number" id="extraVisitorAge' + i + '" min="0" max="120" placeholder="อายุ (ปี) · <5 ฟรี, 5-8=500, >8=1000">' +
-      '</div>';
+'<div class="form-group" id="ageGroup' + i + '" style="display:none;margin-top:6px;">' +
+       '<label>อายุ (ปี) <span style=\"color:var(--red)\">*</span></label>' +
+       '<input type="number" id="extraVisitorAge' + i + '" min="0" max="120" placeholder="อายุ (ปี) · <5 ฟรี, 5-8=500, >8=1000">' +
+       '</div>' +
+       '<div class="form-group" id="birthCertGroup' + i + '" style="display:none;margin-top:6px;">' +
+       '<label>อัพโหลดใบสูติบัตร <span style=\"color:var(--red)\">*</span></label>' +
+       '<input type="file" id="extraVisitorBirthCert' + i + '" accept="image/*" capture="environment">' +
+       '<span style="font-size:11px;color:var(--text2);display:block;margin-top:4px;">อัพโหลดรูปภาพใบสูติบัตรเพื่อยืนยันความสัมพันธ์</span>' +
+       '</div>';
     list.appendChild(div);
     // attach conditional age field for บุตร/ธิดา
     const relEl = div.querySelector('#extraVisitorRelation' + i);
@@ -161,12 +166,17 @@ function updateExtraVisitors() {
       relEl.onchange = function() {
         const ag = document.getElementById('ageGroup' + i);
         const ai = document.getElementById('extraVisitorAge' + i);
+        const bcg = document.getElementById('birthCertGroup' + i);
         if (!ag) return;
         if (this.value === 'บุตร / ธิดา') {
           ag.style.display = 'block';
+          bcg.style.display = 'block';
         } else {
           ag.style.display = 'none';
+          bcg.style.display = 'none';
           if (ai) ai.value = '';
+          const bci = document.getElementById('extraVisitorBirthCert' + i);
+          if (bci) bci.value = '';
         }
       };
     }
@@ -174,26 +184,49 @@ function updateExtraVisitors() {
 }
 
 function getExtraVisitors() {
-  const n = parseInt(document.getElementById('visitorCount').value);
-  const extras = [];
-  for (let i = 2; i <= n; i++) {
-    const nameEl = document.getElementById('extraVisitorName' + i);
-    const idEl   = document.getElementById('extraVisitorId' + i);
-    const relEl  = document.getElementById('extraVisitorRelation' + i);
-    const ageEl  = document.getElementById('extraVisitorAge' + i);
-    const religionEl = document.getElementById('extraVisitorReligion' + i);
-    const allergyEl  = document.getElementById('extraVisitorAllergy' + i);
-    if (nameEl) extras.push({
-      name: nameEl.value.trim(),
-      id: idEl ? idEl.value.trim() : '',
-      relation: relEl ? relEl.value : '',
-      age: ageEl ? ageEl.value.trim() : '',
-      religion: religionEl ? religionEl.value : '',
-      allergy: allergyEl ? allergyEl.value.trim() : ''
-    });
-  }
-  return extras;
-}
+   const n = parseInt(document.getElementById('visitorCount').value);
+   const extras = [];
+   for (let i = 2; i <= n; i++) {
+     const nameEl = document.getElementById('extraVisitorName' + i);
+     const idEl   = document.getElementById('extraVisitorId' + i);
+     const relEl  = document.getElementById('extraVisitorRelation' + i);
+     const ageEl  = document.getElementById('extraVisitorAge' + i);
+     const religionEl = document.getElementById('extraVisitorReligion' + i);
+     const allergyEl  = document.getElementById('extraVisitorAllergy' + i);
+     const birthCertEl = document.getElementById('extraVisitorBirthCert' + i);
+     if (nameEl) extras.push({
+       name: nameEl.value.trim(),
+       id: idEl ? idEl.value.trim() : '',
+       relation: relEl ? relEl.value : '',
+       age: ageEl ? ageEl.value.trim() : '',
+       religion: religionEl ? religionEl.value : '',
+       allergy: allergyEl ? allergyEl.value.trim() : '',
+       birthCertEl: birthCertEl
+     });
+   }
+   return extras;
+ }
+
+ function readFileAsBase64(file) {
+   return new Promise((resolve, reject) => {
+     if (!file) { resolve(null); return; }
+     const reader = new FileReader();
+     reader.onload = () => resolve(reader.result.split(',')[1]);
+     reader.onerror = reject;
+     reader.readAsDataURL(file);
+   });
+ }
+
+ async function getExtraVisitorsAsync() {
+   const extras = getExtraVisitors();
+   for (let i = 0; i < extras.length; i++) {
+     const file = extras[i].birthCertEl && extras[i].birthCertEl.files && extras[i].birthCertEl.files[0];
+     extras[i].birthCertBase64 = file ? await readFileAsBase64(file) : null;
+     extras[i].birthCertName = file ? file.name : '';
+     delete extras[i].birthCertEl;
+   }
+   return extras;
+ }
 
 function calculateTotal() {
   const n = parseInt(document.getElementById('visitorCount').value) || 1;
@@ -503,18 +536,24 @@ function validate() {
     const allergyEl = document.getElementById('extraVisitorAllergy' + i);
     if (allergyEl && !allergyEl.value.trim()) { alert('กรุณาระบุการแพ้อาหารสำหรับผู้เข้าร่วมกิจกรรมคนที่ ' + i + ' (ถ้าไม่มีให้กรอก \"ไม่มี\")'); allergyEl.focus(); return false; }
     
-    const relEl = document.getElementById('extraVisitorRelation' + i);
-    if (relEl && !relEl.value) { alert('กรุณาเลือกความสัมพันธ์ผู้ร่วมกิจกรรมคนที่ ' + i); relEl.focus(); return false; }
-    if (relEl && relEl.value === 'บุตร / ธิดา') {
-      const ageEl = document.getElementById('extraVisitorAge' + i);
-      const a = ageEl ? parseInt(ageEl.value, 10) : NaN;
-      if (!ageEl || isNaN(a) || a < 0) {
-        alert('กรุณากรอกอายุ (ปี) สำหรับผู้เข้าร่วมกิจกรรมคนที่ ' + i + ' (บุตร/ธิดา)');
-        if (ageEl) ageEl.focus();
-        return false;
-      }
-    }
-  }
+const relEl = document.getElementById('extraVisitorRelation' + i);
+     if (relEl && !relEl.value) { alert('กรุณาเลือกความสัมพันธ์ผู้ร่วมกิจกรรมคนที่ ' + i); relEl.focus(); return false; }
+     if (relEl && relEl.value === 'บุตร / ธิดา') {
+       const ageEl = document.getElementById('extraVisitorAge' + i);
+       const a = ageEl ? parseInt(ageEl.value, 10) : NaN;
+       if (!ageEl || isNaN(a) || a < 0) {
+         alert('กรุณากรอกอายุ (ปี) สำหรับผู้เข้าร่วมกิจกรรมคนที่ ' + i + ' (บุตร/ธิดา)');
+         if (ageEl) ageEl.focus();
+         return false;
+       }
+       const birthCertEl = document.getElementById('extraVisitorBirthCert' + i);
+       if (!birthCertEl || !birthCertEl.files || birthCertEl.files.length === 0) {
+         alert('กรุณาอัพโหลดใบสูติบัตร สำหรับผู้เข้าร่วมกิจกรรมคนที่ ' + i + ' (บุตร/ธิดา)');
+         if (birthCertEl) birthCertEl.focus();
+         return false;
+       }
+     }
+   }
   if (!selectedDate) { alert('กรุณาเลือกวันที่ต้องการร่วมกิจกรรม'); return false; }
   if ((bookings[selectedDate] || 0) >= QUOTA) { alert('วันที่เลือกเต็มแล้ว กรุณาเลือกวันอื่น'); return false; }
 
@@ -541,18 +580,18 @@ function validate() {
 }
 
 // ===== GO TO CONFIRM PAGE =====
-function goToConfirm() {
-  if (!validate()) return;
-  const n = parseInt(document.getElementById('visitorCount').value);
-  const totalPersons = n + 1;
-  const d = parseLocalDate(selectedDate);  // ✅ parse local ไม่ผ่าน UTC
-  const thDate = d.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+async function goToConfirm() {
+   if (!validate()) return;
+   const n = parseInt(document.getElementById('visitorCount').value);
+   const totalPersons = n + 1;
+   const d = parseLocalDate(selectedDate);  // ✅ parse local ไม่ผ่าน UTC
+   const thDate = d.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 
-  const extras = getExtraVisitors();
-  const visitor1Name = document.getElementById('visitorName').value.trim();
-  const visitor1Id   = document.getElementById('visitorId').value.trim();
-  const mainRelation = document.getElementById('relation').value;
-  const mainPhone    = document.getElementById('visitorPhone').value.trim();
+   const extras = await getExtraVisitorsAsync();
+   const visitor1Name = document.getElementById('visitorName').value.trim();
+   const visitor1Id   = document.getElementById('visitorId').value.trim();
+   const mainRelation = document.getElementById('relation').value;
+   const mainPhone    = document.getElementById('visitorPhone').value.trim();
 
   const cost = calculateTotal();
   const c = cost;
@@ -577,7 +616,8 @@ function goToConfirm() {
 
   const extrasListHtml = extras.length > 0 ? extras.map((v, i) => {
     const feeNote = (v.relation === 'บุตร / ธิดา' && v.age) ? ` (อายุ ${v.age} ปี)` : '';
-    return `<div style="font-size:13px;padding:2px 0;">• ${v.name} — ${v.relation}${feeNote}</div>`;
+    const birthCertNote = (v.relation === 'บุตร / ธิดา' && v.birthCertName) ? ' ✅ อัพโหลดใบสูติบัตรแล้ว' : '';
+    return `<div style="font-size:13px;padding:2px 0;">• ${v.name} — ${v.relation}${feeNote}${birthCertNote}</div>`;
   }).join('') : '<div style="font-size:13px;color:#666">ไม่มีผู้เข้าร่วมเพิ่มเติม</div>';
 
   const discountLine = cost.discountNotes.length
@@ -660,19 +700,21 @@ function goBack() { showPage(1); }
 
 // ===== SUBMIT =====
 async function submitBooking() {
-  const ref = 'VIS-' + Math.floor(10000 + Math.random() * 90000);
-  const n = parseInt(document.getElementById('visitorCount').value);
-  const totalPersons = n + 1;
-  const d = parseLocalDate(selectedDate);  // ✅ parse local ไม่ผ่าน UTC
-  const thDate = d.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-  const now = new Date().toLocaleString('th-TH');
+   const ref = 'VIS-' + Math.floor(10000 + Math.random() * 90000);
+   const n = parseInt(document.getElementById('visitorCount').value);
+   const totalPersons = n + 1;
+   const d = parseLocalDate(selectedDate);  // ✅ parse local ไม่ผ่าน UTC
+   const thDate = d.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+   const now = new Date().toLocaleString('th-TH');
 
-  const extras = getExtraVisitors();
-  const extraNamesStr = extras.map(v => v.name + '|' + v.id + '|' + v.relation + '|' + (v.age || '')).join(';;');
-  const extraReligionsStr = extras.map(v => v.religion || '').join(';;');
-  const extraAllergiesStr = extras.map(v => v.allergy || '').join(';;');
-
-  const prisonerId = document.getElementById('prisonerId').value.trim();
+   const extras = await getExtraVisitorsAsync();
+   const extraNamesStr = extras.map(v => v.name + '|' + v.id + '|' + v.relation + '|' + (v.age || '') + '|' + (v.birthCertName || '')).join(';;');
+   const extraReligionsStr = extras.map(v => v.religion || '').join(';;');
+   const extraAllergiesStr = extras.map(v => v.allergy || '').join(';;');
+   const extraBirthCertsBase64 = extras.map(v => v.birthCertBase64 || '').join('~|~');
+   const extraBirthCertsNames = extras.map(v => v.birthCertName || '').join(';');
+   
+   const prisonerId = document.getElementById('prisonerId').value.trim();
 
 // ── ตรวจสอบเลขผู้ต้องขังซ้ำในวันเดียวกัน ──
    document.getElementById('overlay').classList.add('show');
@@ -693,37 +735,39 @@ async function submitBooking() {
         return;
       }
     }
-  } catch(err) {
-    console.warn('Duplicate check skipped:', err);
-  }
+} catch(err) {
+     console.warn('Duplicate check skipped:', err);
+   }
 
-  const cost = calculateTotal();
-  const data = {
-    ref,
-    timestamp: now,
-    visitorName: document.getElementById('visitorName').value.trim(),
-    extraVisitorNames: extraNamesStr,
-    visitorId: document.getElementById('visitorId').value.trim(),
-    visitorPhone: document.getElementById('visitorPhone').value.trim(),
-    relation: document.getElementById('relation').value,
-    religion: document.getElementById('visitorReligion').value.trim(),
-    allergy: document.getElementById('visitorAllergy').value.trim(),
-    extraVisitorReligions: extraReligionsStr,
-    extraVisitorAllergies: extraAllergiesStr,
-    prisonerName: document.getElementById('prisonerName').value.trim(),
-    prisonerId: document.getElementById('prisonerId').value.trim(),
-    wing: document.getElementById('wing').value,
-    visitDate: thDate,
-    visitDateISO: selectedDate,
-    visitorCount: n,
-    totalPersons,
-    total: cost.total,
-    adultCount: cost.adults,
-    child5to8Count: cost.kids5_8,
-    childUnder5Count: cost.kidsUnder5,
-    status: 'รอตรวจสอบวินัย',
-    slipImage: ''
-  };
+   const cost = calculateTotal();
+   const data = {
+     ref,
+     timestamp: now,
+     visitorName: document.getElementById('visitorName').value.trim(),
+     extraVisitorNames: extraNamesStr,
+     visitorId: document.getElementById('visitorId').value.trim(),
+     visitorPhone: document.getElementById('visitorPhone').value.trim(),
+     relation: document.getElementById('relation').value,
+     religion: document.getElementById('visitorReligion').value.trim(),
+     allergy: document.getElementById('visitorAllergy').value.trim(),
+     extraVisitorReligions: extraReligionsStr,
+     extraVisitorAllergies: extraAllergiesStr,
+     birthCertFiles: extraBirthCertsNames,
+     birthCertFilesBase64: extraBirthCertsBase64,
+     prisonerName: document.getElementById('prisonerName').value.trim(),
+     prisonerId: document.getElementById('prisonerId').value.trim(),
+     wing: document.getElementById('wing').value,
+     visitDate: thDate,
+     visitDateISO: selectedDate,
+     visitorCount: n,
+     totalPersons,
+     total: cost.total,
+     adultCount: cost.adults,
+     child5to8Count: cost.kids5_8,
+     childUnder5Count: cost.kidsUnder5,
+     status: 'รอตรวจสอบวินัย',
+     slipImage: ''
+   };
 
   // overlay already shown from duplicate check; do NOT add again
   let submitSuccess = false;
@@ -797,14 +841,28 @@ async function submitBooking() {
         <span class="detail-label">🧑 ชื่อผู้จอง</span>
         <span class="detail-value">${data.visitorName}</span>
       </div>
-      ${extras.length > 0 ? `<div class="detail-row">
-        <span class="detail-label">📋 รายชื่อผู้เข้าร่วมเพิ่มเติม</span>
-        <span class="detail-value" style="line-height:1.8">${extras.map((v, i) => `${i + 2}. ${v.name} (${v.relation})`).join('<br>')}</span>
-      </div>` : ''}
-    </div>
+${extras.length > 0 ? `<div class="detail-row">
+          <span class="detail-label">📋 รายชื่อผู้เข้าร่วมเพิ่มเติม</span>
+          <span class="detail-value" style="line-height:1.8">${extras.map((v, i) => {
+            let note = `${i + 2}. ${v.name} (${v.relation})`;
+            if (v.relation === 'บุตร / ธิดา' && v.birthCertName) {
+              note += '<br><span style="font-size:11px;color:var(--green)">✓ อัพโหลดใบสูติบัตรแล้ว</span>';
+            }
+            return note;
+          }).join('<br>')}</span>
+        </div>` : ''}
+      </div>
+      
+      ${extras.filter(v => v.birthCertName).length > 0 ? `<div class="detail-row">
+          <span class="detail-label">📎 ไฟล์ใบสูติบัตร</span>
+          <span class="detail-value"><button class="btn-secondary" style="font-size:12px;padding:6px 12px" onclick="showBirthCertPreviews()">ดูใบสูติบัตร (${extras.filter(v => v.birthCertName).length} ไฟล์)</button></span>
+        </div>` : ''}
+      
+      <div style="font-size:11px;color:#888;text-align:center;margin-top:12px">ใช้ปุ่ม "ตรวจสอบสถานะ" เพื่อติดตาม หรือคัดลอก Ref ด้านบน</div>
+    `;
     
-    <div style="font-size:11px;color:#888;text-align:center;margin-top:12px">ใช้ปุ่ม "ตรวจสอบสถานะ" เพื่อติดตาม หรือคัดลอก Ref ด้านบน</div>
-  `;
+    window.birthCertFilesToPreview = extras.map(v => ({name: v.birthCertName, type: 'image/jpeg'})).filter(v => v.name);
+    sessionStorage.setItem('birthCertFiles', JSON.stringify(window.birthCertFilesToPreview.map(f => f.name)));
 
   // Store ref in sessionStorage for status page
   try {
@@ -816,13 +874,58 @@ async function submitBooking() {
 }
 
 function copyRef() {
-  const ref = document.getElementById('refNumber').textContent;
-  navigator.clipboard.writeText(ref).then(() => {
-    const btn = document.getElementById('copyRefBtn');
-    btn.innerHTML = '<i class="ti ti-check"></i> คัดลอกแล้ว';
-    setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy"></i> คัดลอก Ref'; }, 2000);
-  }).catch(() => {});
-}
+   const ref = document.getElementById('refNumber').textContent;
+   navigator.clipboard.writeText(ref).then(() => {
+     const btn = document.getElementById('copyRefBtn');
+     btn.innerHTML = '<i class="ti ti-check"></i> คัดลอกแล้ว';
+     setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy"></i> คัดลอก Ref'; }, 2000);
+   }).catch(() => {});
+ }
+
+function showBirthCertPreviews() {
+   const files = window.birthCertFilesToPreview || [];
+   if (!files.length) return;
+   
+   // สร้าง modal สำหรับแสดง preview
+   const modal = document.createElement('div');
+   modal.id = 'birthCertModal';
+   modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000;';
+   modal.innerHTML = `
+     <div style="background:white;border-radius:12px;padding:20px;max-width:90%;max-height:90%;overflow:auto;">
+       <h3 style="margin-top:0;margin-bottom:12px">ใบสูติบัตรที่อัพโหลด</h3>
+       <div id="birthCertGallery" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;"></div>
+       <button onclick="document.getElementById('birthCertModal').remove()" style="margin-top:16px;padding:8px 16px;background:#0B2545;color:white;border:none;border-radius:6px;cursor:pointer;">ปิด</button>
+     </div>
+   `;
+   document.body.appendChild(modal);
+   
+   // แสดงรูปภาพ
+   const gallery = modal.querySelector('#birthCertGallery');
+   files.forEach((f, i) => {
+     if (f.type.startsWith('image/')) {
+       const reader = new FileReader();
+       reader.onload = function(e) {
+         const div = document.createElement('div');
+         div.style.cssText = 'border:1px solid #ddd;border-radius:8px;padding:8px;text-align:center;';
+         div.innerHTML = `
+           <img src="${e.target.result}" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:4px;cursor:pointer;" onclick="window.open('${e.target.result}','_blank')">
+           <div style="font-size:11px;margin-top:4px;word-break:break-all;">${f.name}</div>
+         `;
+         gallery.appendChild(div);
+       };
+       reader.readAsDataURL(f);
+     } else {
+       // แสดงไฟล์ที่ไม่ใช่รูปภาพ
+       const div = document.createElement('div');
+       div.style.cssText = 'border:1px solid #ddd;border-radius:8px;padding:12px;text-align:center;background:#f8f9fa;';
+       div.innerHTML = `<div style="font-size:32px;color:var(--blue);">📄</div>
+         <div style="font-size:12px;margin-top:4px;">${f.name}</div>
+         <div style="font-size:10px;color:var(--text2);">ไฟล์ PDF/เอกสาร</div>
+       `;
+       gallery.appendChild(div);
+     }
+   });
+ }
 
 function showPage(n) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
