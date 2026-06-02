@@ -1,43 +1,6 @@
 // ===== CONFIG =====
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbypZzOBaNeHVq3w0mzT0Pt-awA2MRUY0Ehjcef8JjFZHCfjaspMKPdmoqWGuCvZvBtWOw/exec';
 const QUOTA = 20;
-const STAFF_PASS = '10900';
-
-// ===== MARQUEE ANNOUNCEMENT =====
-function normalizeStatus(s) {
-  const v = (s || '').toString().trim().toLowerCase();
-  if (['อนุมัติ', 'approved', 'รอชำระเงิน'].includes(v)) return 'รอชำระเงิน';
-  if (['rejected', 'ไม่อนุมัติ'].includes(v)) return 'ไม่อนุมัติ';
-  if (['paid', 'ชำระแล้ว'].includes(v)) return 'ชำระแล้ว';
-  if (['done', 'เสร็จสิ้น'].includes(v)) return 'เสร็จสิ้น';
-  if (v === 'ยกเลิก') return 'ยกเลิก';
-  return s || 'รอตรวจสอบ';
-}
-
-function checkPaymentMarquee(rows) {
-  const marqueeHidden = sessionStorage.getItem('marqueeHidden') === 'true';
-  if (marqueeHidden) return;
-  
-  const pendingPayments = rows.filter(r => normalizeStatus(r.status) === 'รอชำระเงิน');
-  if (pendingPayments.length > 0) {
-    const displayPayments = pendingPayments.slice(0, 5);
-    const text = displayPayments.map(r => {
-      const vc = parseInt(r.visitorCount) || 1;
-      const total = parseInt(r.total) || (vc + 1) * 1000;
-      return `🚨 Ref ${r.ref} - ยอด ${total.toLocaleString()} บาท (${vc + 1} คน)`;
-    }).join('  •  ');
-    const el = document.getElementById('marqueeText');
-    if (el) el.textContent = text;
-    const container = document.getElementById('marqueeContainer');
-    if (container) container.style.display = 'block';
-  }
-}
-
-function hideMarquee() {
-  const container = document.getElementById('marqueeContainer');
-  if (container) container.style.display = 'none';
-  sessionStorage.setItem('marqueeHidden', 'true');
-}
 
 // ===== CALENDAR =====
 const HOLIDAYS = {
@@ -933,11 +896,11 @@ async function fetchAllReservations() {
 
 // ===== โหลดจำนวนการจองจริงจาก Sheet ก่อน render ปฏิทิน =====
 async function loadBookingCounts() {
+  // นับเฉพาะสถานะที่ "ครอบครองโต๊ะ" — ไม่นับ ยกเลิก และ ไม่อนุมัติ
   const activeStatuses = ['รอตรวจสอบวินัย', 'รอตรวจสอบผู้เข้าร่วม', 'รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น'];
-  let rows = [];
   try {
     console.log('[Calendar] Loading booking counts from server...');
-    rows = await fetchAllReservations();
+    const rows = await fetchAllReservations();
     console.log('[Calendar] Loaded rows:', rows.length);
     if (rows) {
       bookings = {};
@@ -945,6 +908,7 @@ async function loadBookingCounts() {
         if (!r.visitDateISO) return;
         if (!activeStatuses.includes(r.status)) return;
 
+        // ✅ normalize visitDateISO → "YYYY-MM-DD"
         let dateKey = String(r.visitDateISO).trim();
 
         if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
@@ -955,7 +919,7 @@ async function loadBookingCounts() {
             const d = String(parsed.getDate()).padStart(2, '0');
             dateKey = `${y}-${m}-${d}`;
           } else {
-            return;
+            return; // parse ไม่ได้ ข้ามไป
           }
         }
 
@@ -969,7 +933,6 @@ async function loadBookingCounts() {
     console.error('[Calendar] loadBookingCounts failed:', err);
   }
   renderCalendar();
-  checkPaymentMarquee(rows || []);
 }
 
 // Initialize calendar immediately, then load data from server

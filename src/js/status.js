@@ -31,98 +31,6 @@ async function appsScriptGet(params) {
   }
 }
 
-// ===== PROMPTPAY QR GENERATION =====
-const PEMPAY_TAX_ID = '0994000160208';
-const PEMPAY_MERCHANT_ID = 'ML099400ZO0160208VX';
-
-// CRC16-CCITT (0x1021) calculation - EMVCo standard
-function crc16(data) {
-    let crc = 0xFFFF;
-    for (let i = 0; i < data.length; i++) {
-        crc ^= data.charCodeAt(i) << 8;
-        for (let j = 0; j < 8; j++) {
-            crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
-        }
-    }
-    return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
-}
-
-// Generate EMVCo compliant PromptPay QR payload string
-function generatePromptPayPayload(amount, billerId) {
-    const formattedAmount = parseFloat(amount).toFixed(2);
-    const id = billerId || PEMPAY_TAX_ID;
-
-    let payload = '';
-
-    // Payload Format Indicator (ID: 00, Value: "01")
-    payload += '00' + '02' + '01';
-
-    // Point of Initiation Method (ID: 01, Value: "11" = Static QR)
-    payload += '01' + '02' + '11';
-
-    // Merchant Account Information - PromptPay (ID: 29)
-    const ppAid = 'A000000677010001';
-    const merchantInfo = ppAid + id;
-    payload += '29' + ('00' + merchantInfo.length).slice(-2) + merchantInfo;
-
-    // Transaction Currency (ID: 53, Value: "764" for THB)
-    payload += '53' + '03' + '764';
-
-    // Transaction Amount (ID: 54)
-    const amountLength = ('00' + formattedAmount.length).slice(-2);
-    payload += '54' + amountLength + formattedAmount;
-
-    // Country Code (ID: 58, Value: "TH")
-    payload += '58' + '02' + 'TH';
-
-    // CRC placeholder (ID: 63, Length: 04)
-    payload += '63' + '04' + '0000';
-
-    // Calculate and append CRC
-    const crc = crc16(payload);
-    return payload.slice(0, -4) + crc;
-}
-
-// Generate QR code in a container element (EMVCo-compliant with embedded amount)
-function generatePromptPayQR(element, amount, merchantId) {
-    element.innerHTML = '';
-    const formattedAmount = parseFloat(amount).toFixed(2);
-    const id = merchantId || PEMPAY_TAX_ID;
-    
-    const img = document.createElement('img');
-    img.src = 'https://promptpay.io/' + PEMPAY_TAX_ID + '/' + formattedAmount;
-    img.style.width = '100%';
-    img.style.height = '100%';
-    img.style.objectFit = 'contain';
-    img.alt = 'PromptPay QR ' + formattedAmount + ' บาท';
-    img.onload = function() {};
-    img.onerror = function() {
-        if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
-            const payload = generatePromptPayPayload(amount, id);
-            const canvas = document.createElement('canvas');
-            canvas.style.width = '100%';
-            canvas.style.height = '100%';
-            QRCode.toCanvas(canvas, payload, {
-                width: 200,
-                margin: 2,
-                color: { dark: '#000000', light: '#ffffff' }
-            }).catch(() => {
-                element.innerHTML = '<img src="src/asset/promptpay-qr.png" style="width:100%;height:100%;object-fit:contain">';
-            });
-            element.appendChild(canvas);
-        } else {
-            element.innerHTML = '<img src="src/asset/promptpay-qr.png" style="width:100%;height:100%;object-fit:contain">';
-        }
-    };
-    element.appendChild(img);
-}
-
-// Get PromptPay QR URL for external use
-function getPromptPayQRUrl(amount, ref) {
-    const formattedAmount = parseFloat(amount).toFixed(2);
-    return `https://promptpay.io/${PEMPAY_TAX_ID}/${formattedAmount}?ref=${encodeURIComponent(ref)}`;
-}
-
 // ===== TAB =====
 let activeTab = 'ref';
 function switchTab(tab) {
@@ -170,7 +78,7 @@ async function doSearch() {
     const data = await appsScriptGet({ action: 'getAll', pass: STAFF_PASS });
     if (data.status === 'ok') rows = data.rows || [];
     else throw new Error(data.message || 'error');
-} catch(err) {
+  } catch(err) {
     console.error('Fetch error:', err);
     if (APPS_SCRIPT_URL.includes('YOUR_GOOGLE')) {
       rows = getDemoRows();
@@ -185,13 +93,37 @@ async function doSearch() {
     document.getElementById('searchBtn').disabled = false;
   }
 
-  // Filter
+  // Filter - find upcoming bookings (not cancelled and not past completed)
   let found = null;
+  const todayStr = toLocalDateStr(new Date());
+  const completedStatus = ['เสร็จสิ้น', 'done'];
+  const cancelledStatus = ['ยกเลิก', 'cancelled'];
+  
   if (mode === 'ref') {
     found = rows.find(r => (r.ref || '').toUpperCase() === query);
   } else {
     const matches = rows.filter(r => String(r.prisonerId || '').trim() === query);
-    if (matches.length > 0) found = matches[0];
+    if (matches.length > 0) {
+      // Sort by visit date (earliest first) - use visitDateISO for reliable sorting
+      const validMatches = matches
+        .filter(r => {
+          const rStatus = normalizeStatus(r.status);
+          // Never show cancelled bookings
+          if (cancelledStatus.includes(rStatus)) return false;
+          // Show upcoming bookings, and completed bookings only if date hasn't passed
+          if (completedStatus.includes(rStatus)) {
+            const rDate = r.visitDateISO || parseThaiDateToISO(r.visitDate) || '';
+            return String(rDate).trim() >= todayStr;
+          }
+          return true;
+        })
+        .sort((a, b) => {
+          const d1 = a.visitDateISO || parseThaiDateToISO(a.visitDate) || '';
+          const d2 = b.visitDateISO || parseThaiDateToISO(b.visitDate) || '';
+          return String(d1).localeCompare(String(d2));
+        });
+      if (validMatches.length > 0) found = validMatches[0];
+    }
   }
 
   if (!found) {
@@ -238,15 +170,15 @@ let slipFile = null;
 let slipUploaded = false;
 
 function renderResult(row) {
-    currentBooking = row;
-    slipFile = null;
-    slipUploaded = false;
+  currentBooking = row;
+  slipFile = null;
+  slipUploaded = false;
 
-    const status = row.status || 'รอตรวจสอบ';
-    const statusPill = getStatusPill(status);
-    const visitorCount = parseInt(row.visitorCount) || 1;
-    const totalPersons = visitorCount + 1;
-    const total = parseFloat(row.total) || (totalPersons * 1000);
+  const status = row.status || 'รอตรวจสอบ';
+  const statusPill = getStatusPill(status);
+  const visitorCount = parseInt(row.visitorCount) || 1;
+  const totalPersons = visitorCount + 1;
+  const total = parseInt(row.total) || totalPersons * 1000;
 
   let visitorsDetailHtml = '';
   const mainAppr = (row.visitorApproved || '').trim();
@@ -366,7 +298,7 @@ function renderResult(row) {
         </div>
         
         <div style="margin: 10px auto 15px; width: 200px; height: 200px; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
-          <div id="qrcodeContainer"></div>
+          <img src="src/asset/promptpay-qr.png" alt="PromptPay QR Code" style="width: 100%; height: 100%; object-fit: contain;">
         </div>
 
         <div style="font-size:16px;font-weight:700;color:#0a4a55;margin-bottom:4px;">ทัณฑสถานบำบัดพิเศษกลาง</div>
@@ -445,22 +377,12 @@ function getStatusPill(status) {
 
 // ===== SHOW/HIDE PAYMENT =====
 function showPayment() {
-    if (!currentBooking) return;
-    const total = parseFloat(currentBooking.total) || ((parseInt(currentBooking.visitorCount) || 1) + 1) * 1000;
-    const totalPersons = (parseInt(currentBooking.visitorCount) || 1) + 1;
-    
-    if (confirm('ยืนยันยอดชำระเงิน\n\nยอดที่ต้องชำระ: ' + total.toLocaleString() + ' บาท\n(' + totalPersons + ' คน × 1,000 บาท)\n\nกด OK เพื่อแสดง QR Code หรือ Cancel เพื่อยกเลิก')) {
-        document.getElementById('paymentArea').style.display = 'none';
-        document.getElementById('paymentForm').style.display = 'block';
-        const qrContainer = document.getElementById('qrcodeContainer');
-        if (qrContainer) {
-            generatePromptPayQR(qrContainer, total);
-        }
-        setTimeout(() => {
-            const el = document.getElementById('paymentForm');
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 50);
-    }
+  document.getElementById('paymentArea').style.display = 'none';
+  document.getElementById('paymentForm').style.display = 'block';
+  setTimeout(() => {
+    const el = document.getElementById('paymentForm');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
 }
 function hidePayment() {
   document.getElementById('paymentArea').style.display = 'block';
@@ -612,10 +534,10 @@ async function submitPayment() {
 }
 
 function showThankYou() {
-    const row = currentBooking;
-    const visitorCount = parseInt(row.visitorCount) || 1;
-    const totalPersons = visitorCount + 1;
-    const total = parseFloat(row.total) || totalPersons * 1000;
+  const row = currentBooking;
+  const visitorCount = parseInt(row.visitorCount) || 1;
+  const totalPersons = visitorCount + 1;
+  const total = parseInt(row.total) || totalPersons * 1000;
 
   document.getElementById('resultArea').style.display = 'none';
   document.getElementById('thankYouArea').style.display = 'block';
@@ -653,6 +575,28 @@ function setOverlay(show, msg) {
 }
 
 // ===== UTILS =====
+function toLocalDateStr(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function parseThaiDateToISO(dateStr) {
+  if (!dateStr) return '';
+  const thMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                    'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const match = dateStr.match(/(\d+)\s*(?:วัน)?\s*([^\s]+)\s*(?:พ\.ศ\.|พศ\.|)\s*(\d+)/);
+  if (match) {
+    const day = String(match[1]).padStart(2, '0');
+    const monthName = match[2];
+    const year = parseInt(match[3]) - 543; // convert Buddhist era to AD
+    const month = String(thMonths.indexOf(monthName) + 1).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return String(dateStr).trim();
+}
+
 function maskPrisonerName(name) {
   if (!name || name === '—') return name;
   const trimmed = name.trim();
@@ -704,11 +648,45 @@ function getDemoRows() {
       visitorId: '9876543210987',
       visitorPhone: '089-876-5432',
       relation: 'บุตร / ธิดา',
-      prisonerName: 'วิชัย รักชาติ',
+      prisonerName: 'วิชัย รักชาตี',
       prisonerId: '11223344',
       wing: 'แดน 7',
       visitDate: 'วันอังคารที่ 26 พฤษภาคม พ.ศ. 2569',
       visitDateISO: '2026-05-26',
+      visitorCount: 1,
+      totalPersons: 2,
+      total: 2000,
+      status: 'รอตรวจสอบ'
+    },
+    {
+      ref: 'VIS-22222',
+      timestamp: '30/5/2569 09:00',
+      visitorName: 'สมศักดิ์ ทดสอบ',
+      visitorId: '1111111111111',
+      visitorPhone: '081-111-1111',
+      relation: 'บุตร / ธิดา',
+      prisonerName: 'สมศักดิ์ มั่นคง',
+      prisonerId: '56781234',
+      wing: 'แดน 3',
+      visitDate: 'วันจันทร์ที่ 2 มิถุนายน พ.ศ. 2569',
+      visitDateISO: '2026-06-02',
+      visitorCount: 1,
+      totalPersons: 2,
+      total: 2000,
+      status: 'เสร็จสิ้น'
+    },
+    {
+      ref: 'VIS-33333',
+      timestamp: '30/5/2569 10:00',
+      visitorName: 'สมหญิง ตรวจสอบ',
+      visitorId: '2222222222222',
+      visitorPhone: '081-222-2222',
+      relation: 'คู่สมรส',
+      prisonerName: 'สมศักดิ์ มั่นคง',
+      prisonerId: '56781234',
+      wing: 'แดน 3',
+      visitDate: 'วันพุธที่ 4 มิถุนายน พ.ศ. 2569',
+      visitDateISO: '2026-06-04',
       visitorCount: 1,
       totalPersons: 2,
       total: 2000,

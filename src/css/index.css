@@ -8,91 +8,34 @@
 
   --primary: #8B0000;          /* Deep Crimson — action elements */
   --primary-dark: #5C0000;
-  
+
   --bg: #FDFBF7;               /* Warm Off-White */
   --bg2: #F7F3EB;
   --border: #E8E0D1;
-  
+
   --text: #1C2433;
   --text2: #3F4755;
   --text-muted: #6B7280;
-  
+
   --blue: #0B2545;             /* Royal Navy — structure, headers, sidebar */
   --blue-dark: #061A33;
   --blue-light: #E8ECF4;       /* soft navy tint */
   --blue-mid: #0B2545;
-  
+
   --green: #2E5238;            /* warm institutional green */
   --green-light: #EAF0E8;
-  
+
   --gold: #D4AF37;             /* Soft Antique Gold — highlights */
   --gold-light: #F5EFD8;
-  
+
   --red: #8B0000;
   --red-light: #F8E6E6;
-  
+
   --radius: 14px;
   --shadow: 0 4px 24px rgba(13,15,22,0.08);
   --shadow-lg: 0 8px 40px rgba(13,15,22,0.12);
 }
-
-/* ===== MARQUEE ANNOUNCEMENT ===== */
-.marquee-container {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: linear-gradient(135deg, var(--red) 0%, var(--crimson) 100%);
-  border-radius: var(--radius);
-  margin: 1rem auto;
-  display: none;
-  box-shadow: 0 2px 8px rgba(139,0,0,0.25);
-  max-width: 680px;
-}
-
-.marquee-content {
-  display: flex;
-  align-items: center;
-  padding: 10px 14px;
-  gap: 10px;
-}
-
-.marquee-text {
-  flex: 1;
-  font-size: 13px;
-  color: #fff;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.marquee-animate {
-  animation: scroll-left 15s linear infinite;
-}
-
-@keyframes scroll-left {
-  0% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
-}
-
-.marquee-close {
-  background: rgba(255,255,255,0.2);
-  border: none;
-  color: #fff;
-  font-size: 18px;
-  font-weight: 700;
-  cursor: pointer;
-  padding: 4px 10px;
-  border-radius: 50%;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-
-.marquee-close:hover {
-  background: rgba(255,255,255,0.3);
-  transform: scale(1.1);
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { min-height: 100vh; }
   body {
     font-family: 'Sarabun', sans-serif;
