@@ -31,6 +31,35 @@ async function appsScriptGet(params) {
   }
 }
 
+// ===== MARQUEE ANNOUNCEMENT =====
+function checkPaymentMarquee(rows) {
+  const marqueeHidden = sessionStorage.getItem('marqueeHidden') === 'true';
+  if (marqueeHidden) return;
+  
+  const pendingPayments = rows.filter(r => normalizeStatus(r.status) === 'รอชำระเงิน');
+  if (pendingPayments.length > 0) {
+    const displayPayments = pendingPayments.slice(0, 5);
+    const text = displayPayments.map(r => {
+      const vc = parseInt(r.visitorCount) || 1;
+      const total = parseInt(r.total) || (vc + 1) * 1000;
+      return `🚨 Ref ${r.ref} - ยอด ${total.toLocaleString()} บาท (${vc + 1} คน)`;
+    }).join('  •  ');
+    document.getElementById('marqueeText').textContent = text;
+    document.getElementById('marqueeContainer').style.display = 'block';
+  }
+}
+
+function hideMarquee() {
+  document.getElementById('marqueeContainer').style.display = 'none';
+  sessionStorage.setItem('marqueeHidden', 'true');
+}
+
+// ===== PROMPTPAY QR GENERATION =====
+function getPromptPayQRUrl(amount, ref) {
+  const taxId = '0994000160208';
+  return `https://promptpay.io/${taxId}/${amount}?ref=${encodeURIComponent(ref)}`;
+}
+
 // ===== TAB =====
 let activeTab = 'ref';
 function switchTab(tab) {
@@ -78,7 +107,7 @@ async function doSearch() {
     const data = await appsScriptGet({ action: 'getAll', pass: STAFF_PASS });
     if (data.status === 'ok') rows = data.rows || [];
     else throw new Error(data.message || 'error');
-  } catch(err) {
+} catch(err) {
     console.error('Fetch error:', err);
     if (APPS_SCRIPT_URL.includes('YOUR_GOOGLE')) {
       rows = getDemoRows();
@@ -92,6 +121,8 @@ async function doSearch() {
     setOverlay(false);
     document.getElementById('searchBtn').disabled = false;
   }
+
+  checkPaymentMarquee(rows);
 
   // Filter
   let found = null;
@@ -274,7 +305,7 @@ function renderResult(row) {
         </div>
         
         <div style="margin: 10px auto 15px; width: 200px; height: 200px; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
-          <img src="src/asset/promptpay-qr.png" alt="PromptPay QR Code" style="width: 100%; height: 100%; object-fit: contain;">
+          <img src="${getPromptPayQRUrl(total, row.ref)}" alt="PromptPay QR Code" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.src='src/asset/promptpay-qr.png'">
         </div>
 
         <div style="font-size:16px;font-weight:700;color:#0a4a55;margin-bottom:4px;">ทัณฑสถานบำบัดพิเศษกลาง</div>

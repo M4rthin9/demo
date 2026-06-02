@@ -74,8 +74,15 @@
   </div>
 </section>
 
-<section class="info-section">
-  <div class="section-heading">ข้อมูลสำคัญ</div>
+<div class="marquee-container" id="marqueeContainer">
+    <div class="marquee-content">
+      <div class="marquee-text marquee-animate" id="marqueeText"></div>
+      <button class="marquee-close" onclick="hideMarquee()">×</button>
+    </div>
+  </div>
+
+  <section class="info-section">
+    <div class="section-heading">ข้อมูลสำคัญ</div>
 
   <div class="info-cards">
     <div class="info-card">
@@ -124,11 +131,61 @@
 </section>
 
 <footer class="footer">
-  ทัณฑสถานบำบัดพิเศษกลาง · กรมราชทัณฑ์<br>
-  สอบถามเพิ่มเติมติดต่อเจ้าหน้าที่ ณ ทัณฑสถาน<br>
-  <a href="https://main.correct.go.th" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:underline;">ข้อมูลกรมราชทัณฑ์</a>
-</footer>
+   ทัณฑสถานบำบัดพิเศษกลาง · กรมราชทัณฑ์<br>
+   สอบถามเพิ่มเติมติดต่อเจ้าหน้าที่ ณ ทัณฑสถาน<br>
+   <a href="https://main.correct.go.th" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:underline;">ข้อมูลกรมราชทัณฑ์</a>
+ </footer>
 
+ <script>
+   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbypZzOBaNeHVq3w0mzT0Pt-awA2MRUY0Ehjcef8JjFZHCfjaspMKPdmoqWGuCvZvBtWOw/exec';
+   const STAFF_PASS = '10900';
+
+   function normalizeStatus(s) {
+     const v = (s || '').toString().trim().toLowerCase();
+     if (['อนุมัติ', 'approved', 'รอชำระเงิน'].includes(v)) return 'รอชำระเงิน';
+     if (['rejected', 'ไม่อนุมัติ'].includes(v)) return 'ไม่อนุมัติ';
+     if (['paid', 'ชำระแล้ว'].includes(v)) return 'ชำระแล้ว';
+     if (['done', 'เสร็จสิ้น'].includes(v)) return 'เสร็จสิ้น';
+     if (v === 'ยกเลิก') return 'ยกเลิก';
+     return s || 'รอตรวจสอบ';
+   }
+
+   function checkPaymentMarquee(rows) {
+     const marqueeHidden = sessionStorage.getItem('marqueeHidden') === 'true';
+     if (marqueeHidden) return;
+     
+     const pendingPayments = rows.filter(r => normalizeStatus(r.status) === 'รอชำระเงิน');
+     if (pendingPayments.length > 0) {
+       const displayPayments = pendingPayments.slice(0, 5);
+       const text = displayPayments.map(r => {
+         const vc = parseInt(r.visitorCount) || 1;
+         const total = parseInt(r.total) || (vc + 1) * 1000;
+         return `🚨 Ref ${r.ref} - ยอด ${total.toLocaleString()} บาท (${vc + 1} คน)`;
+       }).join('  •  ');
+       document.getElementById('marqueeText').textContent = text;
+       document.getElementById('marqueeContainer').style.display = 'block';
+     }
+   }
+
+   function hideMarquee() {
+     document.getElementById('marqueeContainer').style.display = 'none';
+     sessionStorage.setItem('marqueeHidden', 'true');
+   }
+
+   async function loadMarqueeData() {
+     try {
+       const resp = await fetch(APPS_SCRIPT_URL + '?action=getAll&pass=' + STAFF_PASS);
+       if (resp.ok) {
+         const data = await resp.json();
+         if (data.status === 'ok' && data.rows) {
+           checkPaymentMarquee(data.rows);
+         }
+       }
+     } catch(e) { console.error('Marquee load error:', e); }
+   }
+
+   document.addEventListener('DOMContentLoaded', loadMarqueeData);
+ </script>
 
 </body>
 </html>
