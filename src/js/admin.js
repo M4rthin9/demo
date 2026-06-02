@@ -1577,48 +1577,51 @@ const va = r.visitorApproved || '';
    const canVisitorApproval = isAdminOrSuper || hasPermission('visitor_approval');
    const canApproveParticipant = isAdminOrSuper || hasPermission('approve_participant');
 
-   const visitor1Html = `
-     <div class="visitor-card">
-       <div class="vc-num">👤 ผู้ร่วมกิจกรรมคนที่ 1 (ผู้จอง)</div>
-       <div class="vc-name">${r.visitorName || '—'}</div>
-       <div class="vc-info">บัตร: ${r.visitorId || '—'} · โทร: ${r.visitorPhone || '—'} · ความสัมพันธ์: ${r.relation || '—'}</div>
-       <div class="vc-info">ศาสนา: ${r.religion || '—'} · แพ้อาหาร: ${r.allergy || '—'}</div>
-        <div class="visitor-approval">
-          <span class="lbl">สถานะ:</span>
-          <span class="approval-badge ${va==='yes'?'yes':va==='no'?'no':'pending'}">${getApprLabel(va)}</span>
-          ${canVisitorApproval ? `<button class="approval-btn yes" onclick="updateVisitorApproval(${idx},0,'yes')">✓</button>
-          <button class="approval-btn no" onclick="updateVisitorApproval(${idx},0,'no')">✗</button>` : ''}
-        </div>
-     </div>`;
+const mainBirthCert = String(r.birthCertFiles || '').split(';;')[0] || '';
+    const visitor1Html = `
+      <div class="visitor-card">
+        <div class="vc-num">👤 ผู้ร่วมกิจกรรมคนที่ 1 (ผู้จอง)</div>
+        <div class="vc-name">${r.visitorName || '—'}</div>
+        <div class="vc-info">บัตร: ${r.visitorId || '—'} · โทร: ${r.visitorPhone || '—'} · ความสัมพันธ์: ${r.relation || '—'}</div>
+        <div class="vc-info">ศาสนา: ${r.religion || '—'} · แพ้อาหาร: ${r.allergy || '—'}</div>
+        ${mainBirthCert ? `<div class="vc-info" style="color:var(--green);margin-top:4px;">📎 ใบสูติบัตร: ${mainBirthCert} <button class="btn-view-birthcert" onclick="viewBirthCert('${mainBirthCert}')" style="font-size:11px;padding:2px 6px;margin-left:6px;background:var(--blue-light);color:var(--blue);border:1px solid var(--blue);border-radius:4px;cursor:pointer;">ดู</button></div>` : r.relation === 'บุตร / ธิดา' ? `<div class="vc-info" style="color:var(--red);margin-top:4px;">⚠️ ยังไม่มีใบสูติบัตร</div>` : ''}
+         <div class="visitor-approval">
+           <span class="lbl">สถานะ:</span>
+           <span class="approval-badge ${va==='yes'?'yes':va==='no'?'no':'pending'}">${getApprLabel(va)}</span>
+           ${canVisitorApproval ? `<button class="approval-btn yes" onclick="updateVisitorApproval(${idx},0,'yes')">✓</button>
+           <button class="approval-btn no" onclick="updateVisitorApproval(${idx},0,'no')">✗</button>` : ''}
+         </div>
+      </div>`;
 
   let extraHtml = '';
   if (r.extraVisitorNames && r.extraVisitorNames.trim()) {
     const isNewFormat = r.extraVisitorNames.includes(';;') || r.extraVisitorNames.includes('|');
     let extras = [];
-    if (isNewFormat) {
-      extras = r.extraVisitorNames.split(';;').map(e => {
-        const parts = e.split('|');
-        return { 
-          name: (parts[0]||'').trim(), 
-          id: (parts[1]||'').trim(), 
-          relation: (parts[2]||'').trim(),
-          age: (parts[3]||'').trim()
-        };
-      }).filter(e => e.name);
-    } else {
-      extras = r.extraVisitorNames.split(/,(?![^(]*\))/).map(e => {
-        const m = e.trim().match(/^(.+?)\s*\(([^,)]+?)(?:,\s*([^)]+))?\)$/);
-        if (m) return { name: m[1].trim(), id: (m[2]||'').trim(), relation: (m[3]||'').trim(), age: '' };
-        return { name: e.trim(), id: '', relation: '', age: '' };
-      }).filter(e => e.name);
-    }
+if (isNewFormat) {
+       extras = r.extraVisitorNames.split(';;').map(e => {
+         const parts = e.split('|');
+         return { 
+           name: (parts[0]||'').trim(), 
+           id: (parts[1]||'').trim(), 
+           relation: (parts[2]||'').trim(),
+           age: (parts[3]||'').trim(),
+           birthCertName: (parts[4]||'').trim()
+         };
+       }).filter(e => e.name);
+     } else {
+       extras = r.extraVisitorNames.split(/,(?![^(]*\))/).map(e => {
+         const m = e.trim().match(/^(.+?)\s*\(([^,)]+?)(?:,\s*([^)]+))?\)$/);
+         if (m) return { name: m[1].trim(), id: (m[2]||'').trim(), relation: (m[3]||'').trim(), age: '', birthCertName: '' };
+         return { name: e.trim(), id: '', relation: '', age: '', birthCertName: '' };
+       }).filter(e => e.name);
+     }
 extras.forEach((v, i) => {
         const infoParts = [];
         if (v.id) infoParts.push('บัตร: ' + v.id);
         if (v.relation) infoParts.push('ความสัมพันธ์: ' + v.relation);
         if (v.age) infoParts.push('อายุ: ' + v.age + ' ปี');
         const ea = String(r.extraVisitorApproved || '').split(';;')[i] || '';
-        const birthCertFile = String(r.birthCertFiles || '').split(';;')[i] || '';
+        const birthCertFile = String(r.birthCertFiles || '').split(';;')[i + 1] || '';
         extraHtml += `
           <div class="visitor-card">
             <div class="vc-num">👤 ผู้ร่วมกิจกรรมคนที่ ${i + 2}</div>

@@ -57,7 +57,7 @@
         </div>
         <div class="form-group">
           <label>ความสัมพันธ์ <span style="color:var(--red)">*</span></label>
-          <select id="relation">
+          <select id="relation" onchange="toggleMainBirthCert()">
             <option value="">-- เลือก --</option>
             <option>บิดา / มารดา</option><option>แฟน/ภรรยา</option><option>บุตร / ธิดา</option>
             <option>พี่ / น้อง</option><option>ญาติ</option><option>เพื่อน</option>
@@ -93,6 +93,15 @@
           </div>
           <div id="extraVisitorsList" class="form-grid"></div>
         </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><i class="ti ti-user"></i> ข้อมูลผู้เข้าร่วมหลัก (ผู้จอง)</div>
+      <div id="mainVisitorBirthCertGroup" class="form-group full" style="display:none;">
+        <label>อัพโหลดใบสูติบัตร <span style="color:var(--red)">*</span></label>
+        <input type="file" id="mainVisitorBirthCert" accept="image/*" capture="environment" onchange="updateMainBirthCertStatus(this)">
+        <span id="mainBirthCertStatus" style="font-size:11px;display:block;margin-top:4px;color:var(--text2)"></span>
       </div>
     </div>
 

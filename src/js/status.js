@@ -180,25 +180,32 @@ function renderResult(row) {
   const totalPersons = visitorCount + 1;
   const total = parseInt(row.total) || totalPersons * 1000;
 
-  let visitorsDetailHtml = '';
-  const mainAppr = (row.visitorApproved || '').trim();
-  const mainLabel = mainAppr==='yes' ? '✅ เข้าได้' : mainAppr==='no' ? '❌ เข้าไม่ได้' : '';
-  visitorsDetailHtml += `<div class="visitor-item"><span>👤 ${escHtml(row.visitorName||'—')}</span>${mainLabel ? '<span class="approval-badge '+(mainAppr==='yes'?'yes':mainAppr==='no'?'no':'pending')+'">'+mainLabel+'</span>' : ''}</div>`;
-  if (row.extraVisitorNames && row.extraVisitorNames.trim()) {
-    const isNew = row.extraVisitorNames.includes(';;') || row.extraVisitorNames.includes('|');
-    let exs = [];
-    if (isNew) {
-      exs = row.extraVisitorNames.split(';;').map(e=>{const p=e.split('|');return {name:(p[0]||'').trim()};}).filter(e=>e.name);
-    } else {
-      exs = row.extraVisitorNames.split(/,(?![^(]*\))/).map(e=>{const m=e.trim().match(/^(.+?)\s*\(/);return {name:m?m[1].trim():e.trim()};}).filter(e=>e.name);
-    }
-    const eAppr = String(row.extraVisitorApproved||'').split(';;');
-    exs.forEach((v,i)=>{
-      const a = (eAppr[i]||'').trim();
-      const lb = a==='yes'?'✅ เข้าได้':a==='no'?'❌ เข้าไม่ได้':'';
-      visitorsDetailHtml += `<div class="visitor-item"><span>👤 ${escHtml(v.name)}</span>${lb ? '<span class="approval-badge '+(a==='yes'?'yes':a==='no'?'no':'pending')+'">'+lb+'</span>' : ''}</div>`;
-    });
-  }
+let visitorsDetailHtml = '';
+   const mainAppr = (row.visitorApproved || '').trim();
+   const mainLabel = mainAppr==='yes' ? '✅ เข้าได้' : mainAppr==='no' ? '❌ เข้าไม่ได้' : '';
+   const mainBirthCert = String(row.birthCertFiles || '').split(';;')[0] || '';
+   visitorsDetailHtml += `<div class="visitor-item"><span>👤 ${escHtml(row.visitorName||'—')}</span>${mainLabel ? '<span class="approval-badge '+(mainAppr==='yes'?'yes':mainAppr==='no'?'no':'pending')+'">'+mainLabel+'</span>' : ''}${mainBirthCert ? `<br><span style="font-size:11px;color:var(--green)">📎 อัพโหลดใบสูติบัตรแล้ว</span><button class="btn-secondary" style="font-size:11px;padding:2px 6px;margin-left:6px" onclick="viewBirthCert('${mainBirthCert.replace(/'/g, "\\'")}')">ดู</button>` : (row.relation === 'บุตร / ธิดา') ? `<br><span style="font-size:11px;color:var(--red)">⚠️ ยังไม่มีใบสูติบัตร</span>` : ''}</div>`;
+if (row.extraVisitorNames && row.extraVisitorNames.trim()) {
+     const isNew = row.extraVisitorNames.includes(';;') || row.extraVisitorNames.includes('|');
+     let exs = [];
+     if (isNew) {
+       exs = row.extraVisitorNames.split(';;').map(e=>{const p=e.split('|');return {name:(p[0]||'').trim(), relation:(p[2]||'').trim()};}).filter(e=>e.name);
+     } else {
+       exs = row.extraVisitorNames.split(/,(?![^(]*\))/).map(e=>{const m=e.trim().match(/^(.+?)\s*\(/);return {name:m?m[1].trim():e.trim(), relation:''};}).filter(e=>e.name);
+     }
+     const eAppr = String(row.extraVisitorApproved||'').split(';;');
+     const eBirthCerts = String(row.birthCertFiles||'').split(';;');
+     exs.forEach((v,i)=>{
+       const a = (eAppr[i]||'').trim();
+       const lb = a==='yes'?'✅ เข้าได้':a==='no'?'❌ เข้าไม่ได้':'';
+       const bc = (eBirthCerts[i+1]||'').trim();
+       const bcLabel = bc ? `<br><span style="font-size:11px;color:var(--green)">📎 อัพโหลดใบสูติบัตรแล้ว</span>` : (v.relation && v.relation.includes('บุตร')) ? `<br><span style="font-size:11px;color:var(--red)">⚠️ ยังไม่มีใบสูติบัตร</span>` : '';
+       visitorsDetailHtml += `<div class="visitor-item"><span>👤 ${escHtml(v.name)}</span>${lb ? '<span class="approval-badge '+(a==='yes'?'yes':a==='no'?'no':'pending')+'">'+lb+'</span>' : ''}${bcLabel}</div>`;
+       if (bc) {
+         visitorsDetailHtml += `<div class="visitor-item" style="padding-left:24px"><button class="btn-secondary" style="font-size:11px;padding:3px 10px" onclick="viewBirthCert('${bc.replace(/'/g, "\\'")}')">📎 ดูใบสูติบัตร</button></div>`;
+       }
+     });
+   }
 
   const area = document.getElementById('resultArea');
   area.style.display = 'block';
@@ -565,6 +572,33 @@ function resetSearch() {
   slipFile = null;
   slipUploaded = false;
   window.scrollTo(0, 0);
+}
+
+function viewBirthCert(birthCertValue) {
+  if (!birthCertValue) return;
+  const urls = String(birthCertValue).split(';;').filter(u => u.trim());
+  if (!urls.length) { alert('尚未找到 uploaded file'); return; }
+  const isDrive = urls.some(u => u.includes('drive.google.com') || u.includes('drive.usercontent.google.com'));
+  let html = '';
+  if (isDrive) {
+    html = urls.map(url => `
+      <div style="margin:10px 0;text-align:center">
+        <img src="${url}" style="max-width:100%;max-height:70vh;border-radius:8px;border:1px solid #ddd" onerror="this.src='https://via.placeholder.com/400x300?text=ไม่สามารถโหลดรูปได้'">
+        <br><a href="${url}" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue)">เปิดในแท็บใหม่</a>
+      </div>`).join('');
+  } else {
+    html = '<p style="color:var(--text2);text-align:center">📎 ไฟล์ที่อัพโหลด:</p>' + urls.map(n => `<div style="font-size:13px;padding:4px 0">• ${escHtml(n)}</div>`).join('');
+  }
+  const m = document.createElement('div');
+  m.id = 'birthCertModal';
+  m.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000';
+  m.innerHTML = `
+    <div style="background:#fff;border-radius:12px;padding:20px;max-width:90%;max-height:90%;overflow:auto">
+      <h3 style="margin-top:0;margin-bottom:12px">📎 ใบสูติบัตร</h3>
+      <div>${html}</div>
+      <button onclick="document.getElementById('birthCertModal').remove()" style="margin-top:16px;padding:8px 16px;background:#0B2545;color:#fff;border:none;border-radius:6px;cursor:pointer">ปิด</button>
+    </div>`;
+  document.body.appendChild(m);
 }
 
 // ===== OVERLAY =====

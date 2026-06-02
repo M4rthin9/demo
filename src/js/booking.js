@@ -120,7 +120,44 @@ function selectDate(dateStr, blocked) {
   renderCalendar();
 }
 
-// ===== EXTRA VISITORS =====
+function updateBirthCertStatus(input, idx) {
+   const statusEl = document.getElementById('birthCertStatus' + idx);
+   if (!statusEl) return;
+   if (input.files && input.files[0]) {
+     statusEl.textContent = '✓ อัพโหลดแล้ว: ' + input.files[0].name;
+     statusEl.style.color = 'var(--green)';
+   } else {
+     statusEl.textContent = '';
+   }
+ }
+
+ function updateMainBirthCertStatus(input) {
+   const statusEl = document.getElementById('mainBirthCertStatus');
+   if (!statusEl) return;
+   if (input.files && input.files[0]) {
+     statusEl.textContent = '✓ อัพโหลดแล้ว: ' + input.files[0].name;
+     statusEl.style.color = 'var(--green)';
+   } else {
+     statusEl.textContent = '';
+   }
+ }
+
+ function toggleMainBirthCert() {
+   const rel = document.getElementById('relation').value;
+   const group = document.getElementById('mainVisitorBirthCertGroup');
+   if (!group) return;
+   if (rel === 'บุตร / ธิดา') {
+     group.style.display = 'block';
+   } else {
+     group.style.display = 'none';
+     const inp = document.getElementById('mainVisitorBirthCert');
+     if (inp) inp.value = '';
+     const st = document.getElementById('mainBirthCertStatus');
+     if (st) st.textContent = '';
+   }
+ }
+
+ // ===== EXTRA VISITORS =====
 function updateExtraVisitors() {
   const n = parseInt(document.getElementById('visitorCount').value);
   const container = document.getElementById('extraVisitorsContainer');
@@ -154,10 +191,10 @@ function updateExtraVisitors() {
        '<label>อายุ (ปี) <span style=\"color:var(--red)\">*</span></label>' +
        '<input type="number" id="extraVisitorAge' + i + '" min="0" max="120" placeholder="อายุ (ปี) · <5 ฟรี, 5-8=500, >8=1000">' +
        '</div>' +
-       '<div class="form-group" id="birthCertGroup' + i + '" style="display:none;margin-top:6px;">' +
-       '<label>อัพโหลดใบสูติบัตร <span style=\"color:var(--red)\">*</span></label>' +
-       '<input type="file" id="extraVisitorBirthCert' + i + '" accept="image/*" capture="environment">' +
-       '<span style="font-size:11px;color:var(--text2);display:block;margin-top:4px;">อัพโหลดรูปภาพใบสูติบัตรเพื่อยืนยันความสัมพันธ์</span>' +
+'<div class="form-group" id="birthCertGroup' + i + '" style="display:none;margin-top:6px;">' +
+       '<label>อัพโหลดใบสูติบัตร <span style="color:var(--red)">*</span></label>' +
+       '<input type="file" id="extraVisitorBirthCert' + i + '" accept="image/*" capture="environment" onchange="updateBirthCertStatus(this, ' + i + ')">' +
+       '<span id="birthCertStatus' + i + '" style="font-size:11px;display:block;margin-top:4px;color:var(--text2)"></span>' +
        '</div>';
     list.appendChild(div);
     // attach conditional age field for บุตร/ธิดา
@@ -207,15 +244,15 @@ function getExtraVisitors() {
    return extras;
  }
 
- function readFileAsBase64(file) {
-   return new Promise((resolve, reject) => {
-     if (!file) { resolve(null); return; }
-     const reader = new FileReader();
-     reader.onload = () => resolve(reader.result.split(',')[1]);
-     reader.onerror = reject;
-     reader.readAsDataURL(file);
-   });
- }
+function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      if (!file) { resolve(null); return; }
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
 
  async function getExtraVisitorsAsync() {
    const extras = getExtraVisitors();
@@ -517,10 +554,21 @@ function validate() {
   if (!mainReligion.value.trim()) { alert('กรุณาเลือกศาสนา'); mainReligion.focus(); return false; }
   
   // Validate main visitor allergy (required)
-  const mainAllergy = document.getElementById('visitorAllergy');
-  if (!mainAllergy.value.trim()) { alert('กรุณาระบุการแพ้อาหาร (ถ้าไม่มีให้กรอก \"ไม่มี\")'); mainAllergy.focus(); return false; }
-  
-  // Validate extra visitors (name + id + religion + allergy)
+   const mainAllergy = document.getElementById('visitorAllergy');
+   if (!mainAllergy.value.trim()) { alert('กรุณาระบุการแพ้อาหาร (ถ้าไม่มีให้กรอก \"ไม่มี\")'); mainAllergy.focus(); return false; }
+   
+   // Validate main visitor birth cert (if relation = บุตร/ธิดา)
+   const mainRelation = document.getElementById('relation').value;
+   if (mainRelation === 'บุตร / ธิดา') {
+     const mainBirthCertEl = document.getElementById('mainVisitorBirthCert');
+     if (!mainBirthCertEl || !mainBirthCertEl.files || mainBirthCertEl.files.length === 0) {
+       alert('กรุณาอัพโหลดใบสูติบัตรของผู้เข้าร่วมหลัก (บุตร/ธิดา)');
+       if (mainBirthCertEl) mainBirthCertEl.focus();
+       return false;
+     }
+   }
+   
+   // Validate extra visitors (name + id + religion + allergy)
   const n = parseInt(document.getElementById('visitorCount').value);
   for (let i = 2; i <= n; i++) {
     const nameEl = document.getElementById('extraVisitorName' + i);
@@ -698,7 +746,6 @@ async function goToConfirm() {
 
 function goBack() { showPage(1); }
 
-// ===== SUBMIT =====
 async function submitBooking() {
    const ref = 'VIS-' + Math.floor(10000 + Math.random() * 90000);
    const n = parseInt(document.getElementById('visitorCount').value);
@@ -713,29 +760,39 @@ async function submitBooking() {
    const extraAllergiesStr = extras.map(v => v.allergy || '').join(';;');
    const extraBirthCertsBase64 = extras.map(v => v.birthCertBase64 || '').join('~|~');
    const extraBirthCertsNames = extras.map(v => v.birthCertName || '').join(';');
-   
-   const prisonerId = document.getElementById('prisonerId').value.trim();
 
+   const mainBirthCertEl = document.getElementById('mainVisitorBirthCert');
+   const mainBirthCertFile = mainBirthCertEl && mainBirthCertEl.files && mainBirthCertEl.files[0] ? mainBirthCertEl.files[0] : null;
+   let mainBirthCertBase64 = null;
+   let mainBirthCertName = '';
+   if (mainBirthCertFile) {
+     mainBirthCertBase64 = await readFileAsBase64(mainBirthCertFile);
+     mainBirthCertName = mainBirthCertFile.name;
+   }
+   
+const allBirthCertsBase64 = [mainBirthCertBase64 || '', ...extras.map(v => v.birthCertBase64 || '')].join('~|~');
+    const allBirthCertsNames = [mainBirthCertName || '', ...extras.map(v => v.birthCertName || '')].join(';');
+   
 // ── ตรวจสอบเลขผู้ต้องขังซ้ำในวันเดียวกัน ──
-   document.getElementById('overlay').classList.add('show');
-   document.getElementById('submitBtn').disabled = true;
-   try {
-     const rows = await fetchAllReservations();
-     if (rows) {
-       const activeStatuses = ['รอตรวจสอบวินัย', 'รอตรวจสอบผู้เข้าร่วม', 'รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น'];
-       const duplicate = rows.find(r =>
-         String(r.prisonerId || '').trim() === prisonerId &&
-         (r.visitDateISO || '') === selectedDate &&
-         activeStatuses.includes(r.status)
-       );
-      if (duplicate) {
-        document.getElementById('overlay').classList.remove('show');
-        document.getElementById('submitBtn').disabled = false;
-        alert(`⚠️ ไม่สามารถจองได้\n\nมีการจองผู้ต้องขังหมายเลข "${prisonerId}" ในวันนี้อยู่แล้ว\n\nRef: ${duplicate.ref}\nสถานะ: ${duplicate.status}\n\nกรุณาเลือกวันอื่น หรือตรวจสอบสถานะการจองเดิม`);
-        return;
-      }
-    }
-} catch(err) {
+    document.getElementById('overlay').classList.add('show');
+    document.getElementById('submitBtn').disabled = true;
+    try {
+      const rows = await fetchAllReservations();
+      if (rows) {
+        const activeStatuses = ['รอตรวจสอบวินัย', 'รอตรวจสอบผู้เข้าร่วม', 'รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น'];
+        const duplicate = rows.find(r =>
+          String(r.prisonerId || '').trim() === prisonerId &&
+          (r.visitDateISO || '') === selectedDate &&
+          activeStatuses.includes(r.status)
+        );
+       if (duplicate) {
+         document.getElementById('overlay').classList.remove('show');
+         document.getElementById('submitBtn').disabled = false;
+         alert(`⚠️ ไม่สามารถจองได้\n\nมีการจองผู้ต้องขังหมายเลข "${prisonerId}" ในวันนี้อยู่แล้ว\n\nRef: ${duplicate.ref}\nสถานะ: ${duplicate.status}\n\nกรุณาเลือกวันอื่น หรือตรวจสอบสถานะการจองเดิม`);
+         return;
+       }
+     }
+   } catch(err) {
      console.warn('Duplicate check skipped:', err);
    }
 
@@ -752,8 +809,9 @@ async function submitBooking() {
      allergy: document.getElementById('visitorAllergy').value.trim(),
      extraVisitorReligions: extraReligionsStr,
      extraVisitorAllergies: extraAllergiesStr,
-     birthCertFiles: extraBirthCertsNames,
-     birthCertFilesBase64: extraBirthCertsBase64,
+     birthCertFiles: allBirthCertsNames,
+     birthCertFilesBase64: allBirthCertsBase64,
+     mainBirthCertName: mainBirthCertName,
      prisonerName: document.getElementById('prisonerName').value.trim(),
      prisonerId: document.getElementById('prisonerId').value.trim(),
      wing: document.getElementById('wing').value,
