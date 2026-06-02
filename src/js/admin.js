@@ -326,10 +326,11 @@ return `<tr data-idx="${rowIdx}">
              </div>
            </td>
 <td data-label="จัดการ">
-              <div class="action-btns">
-                <button class="btn-slip" onclick="viewSlip(${rowIdx})">🧾 สลิป</button>
-                <button class="btn-slip" style="background:var(--blue-light);color:var(--blue);border-color:var(--blue)" onclick="viewDetail(${rowIdx})">📋 รายละเอียด</button>
-              </div>
+               <div class="action-btns">
+                 <button class="btn-slip" onclick="viewSlip(${rowIdx})">🧾 สลิป</button>
+                 <button class="btn-slip" style="background:var(--blue-light);color:var(--blue);border-color:var(--blue)" onclick="viewDetail(${rowIdx})">📋 รายละเอียด</button>
+                 ${r.birthCertFiles && r.birthCertFiles.trim() ? `<button class="btn-slip" style="background:rgba(46,125,54,0.1);color:#2e7d32;border-color:#2e7d32" onclick="viewBirthCert('${r.birthCertFiles.replace(/'/g, "\\'")}')"><i class="ti ti-file"></i> ใบสูติบัตร</button>` : ''}
+               </div>
               <div class="mobile-actions-expanded" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:${s === 'รอตรวจสอบวินัย' || s === 'รอตรวจสอบผู้เข้าร่วม' || s === 'รอชำระเงิน' || s === 'ชำระแล้ว' ? 'flex' : 'none'};flex-wrap:wrap;gap:6px">
                 ${canConfirmPayment && (s === 'รอชำระเงิน' || s === 'ชำระแล้ว') ? `<button class="btn-confirm-pay" onclick="confirmPayment(${rowIdx})">${s === 'ชำระแล้ว' ? '✅ เสร็จสิ้น' : '💳 ยืนยันชำระเงิน'}</button>` : ''}
                 ${canApproveDiscipline && s === 'รอตรวจสอบวินัย' ? `<button class="btn-approve" onclick="updateStatus(${rowIdx},'รอตรวจสอบผู้เข้าร่วม')">✓ อนุมัติวินัย</button>` : ''}
@@ -1716,12 +1717,21 @@ function closeDetailModal(e) {
 
   let html = '';
   if (isDriveUrl) {
-  html = urls.map(url => `
-      <div style="margin:10px 0;text-align:center;">
-        <img src="${url}" style="max-width:100%;max-height:70vh;border-radius:8px;border:1px solid #ddd;" onerror="this.src='https://via.placeholder.com/400x300?text=ไม่สามารถโหลดรูปได้'">
-        <br><a href="${url}" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);">เปิดในแท็บใหม่</a>
-      </div>
-    `).join('');
+    html = urls.map(url => {
+      // URL is already thumbnail format from server - use directly
+      // If it's a direct file URL, extract ID and convert to thumbnail
+      const fileIdMatch = url.match(/(?:[?&]id=|\/d\/|\/open\?id=|thumbnail\?id=)([a-zA-Z0-9_-]{10,})/);
+      const displayUrl = fileIdMatch ? `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}&sz=w1200` : url;
+      const openUrl = fileIdMatch && url.includes('thumbnail') 
+        ? `https://drive.google.com/file/d/${fileIdMatch[1]}/view` 
+        : url;
+      return `
+        <div style="margin:10px 0;text-align:center;">
+          <img src="${displayUrl}" style="max-width:100%;max-height:70vh;border-radius:8px;border:1px solid #ddd;" onerror="this.src='https://via.placeholder.com/400x300?text=ไม่สามารถโหลดรูปได้'">
+          <br><a href="${openUrl}" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);">เปิดในแท็บใหม่</a>
+        </div>
+      `;
+    }).join('');
   } else {
     html = '<p style="color:var(--text2);text-align:center;">📎 ไฟล์ที่อัพโหลด:</p>' +
       urls.map(name => `<div style="font-size:13px;padding:4px 0;">• ${name}</div>`).join('');

@@ -581,11 +581,18 @@ function viewBirthCert(birthCertValue) {
   const isDrive = urls.some(u => u.includes('drive.google.com') || u.includes('drive.usercontent.google.com'));
   let html = '';
   if (isDrive) {
-    html = urls.map(url => `
-      <div style="margin:10px 0;text-align:center">
-        <img src="${url}" style="max-width:100%;max-height:70vh;border-radius:8px;border:1px solid #ddd" onerror="this.src='https://via.placeholder.com/400x300?text=ไม่สามารถโหลดรูปได้'">
-        <br><a href="${url}" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue)">เปิดในแท็บใหม่</a>
-      </div>`).join('');
+    html = urls.map(url => {
+      // URL is already thumbnail format from server - use directly
+      const fileIdMatch = url.match(/(?:[?&]id=|\/d\/|\/open\?id=|thumbnail\?id=)([a-zA-Z0-9_-]{10,})/);
+      const openUrl = fileIdMatch && url.includes('thumbnail') 
+        ? `https://drive.google.com/file/d/${fileIdMatch[1]}/view` 
+        : url;
+      return `
+        <div style="margin:10px 0;text-align:center">
+          <img src="${url}" style="max-width:100%;max-height:70vh;border-radius:8px;border:1px solid #ddd" onerror="this.src='https://via.placeholder.com/400x300?text=ไม่สามารถโหลดรูปได้'">
+          <br><a href="${openUrl}" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue)">เปิดในแท็บใหม่</a>
+        </div>`;
+    }).join('');
   } else {
     html = '<p style="color:var(--text2);text-align:center">📎 ไฟล์ที่อัพโหลด:</p>' + urls.map(n => `<div style="font-size:13px;padding:4px 0">• ${escHtml(n)}</div>`).join('');
   }
