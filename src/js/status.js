@@ -31,31 +31,7 @@ async function appsScriptGet(params) {
   }
 }
 
-// ===== MARQUEE ANNOUNCEMENT =====
-function checkPaymentMarquee(rows) {
-  const marqueeHidden = sessionStorage.getItem('marqueeHidden') === 'true';
-  if (marqueeHidden) return;
-  
-  const pendingPayments = rows.filter(r => normalizeStatus(r.status) === 'รอชำระเงิน');
-  if (pendingPayments.length > 0) {
-    const displayPayments = pendingPayments.slice(0, 5);
-    const text = displayPayments.map(r => {
-      const vc = parseInt(r.visitorCount) || 1;
-      const total = parseInt(r.total) || (vc + 1) * 1000;
-      return `🚨 Ref ${r.ref} - ยอด ${total.toLocaleString()} บาท (${vc + 1} คน)`;
-    }).join('  •  ');
-    document.getElementById('marqueeText').textContent = text;
-    document.getElementById('marqueeContainer').style.display = 'block';
-  }
-}
-
-function hideMarquee() {
-  document.getElementById('marqueeContainer').style.display = 'none';
-  sessionStorage.setItem('marqueeHidden', 'true');
-}
-
 // ===== PROMPTPAY QR GENERATION =====
-
 const PEMPAY_TAX_ID = '0994000160208';
 const PEMPAY_MERCHANT_ID = 'ML099400ZO0160208VX';
 
@@ -208,8 +184,6 @@ async function doSearch() {
     setOverlay(false);
     document.getElementById('searchBtn').disabled = false;
   }
-
-  checkPaymentMarquee(rows);
 
   // Filter
   let found = null;
