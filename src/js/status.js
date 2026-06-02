@@ -55,9 +55,96 @@ function hideMarquee() {
 }
 
 // ===== PROMPTPAY QR GENERATION =====
+
+const PEMPAY_TAX_ID = '0994000160208';
+const PEMPAY_MERCHANT_ID = 'ML099400ZO0160208VX';
+
+// CRC16-CCITT (0x1021) calculation - EMVCo standard
+function crc16(data) {
+    let crc = 0xFFFF;
+    for (let i = 0; i < data.length; i++) {
+        crc ^= data.charCodeAt(i) << 8;
+        for (let j = 0; j < 8; j++) {
+            crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+        }
+    }
+    return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+}
+
+// Generate EMVCo compliant PromptPay QR payload string
+function generatePromptPayPayload(amount, billerId) {
+    const formattedAmount = parseFloat(amount).toFixed(2);
+    const id = billerId || PEMPAY_TAX_ID;
+
+    let payload = '';
+
+    // Payload Format Indicator (ID: 00, Value: "01")
+    payload += '00' + '02' + '01';
+
+    // Point of Initiation Method (ID: 01, Value: "11" = Static QR)
+    payload += '01' + '02' + '11';
+
+    // Merchant Account Information - PromptPay (ID: 29)
+    const ppAid = 'A000000677010001';
+    const merchantInfo = ppAid + id;
+    payload += '29' + ('00' + merchantInfo.length).slice(-2) + merchantInfo;
+
+    // Transaction Currency (ID: 53, Value: "764" for THB)
+    payload += '53' + '03' + '764';
+
+    // Transaction Amount (ID: 54)
+    const amountLength = ('00' + formattedAmount.length).slice(-2);
+    payload += '54' + amountLength + formattedAmount;
+
+    // Country Code (ID: 58, Value: "TH")
+    payload += '58' + '02' + 'TH';
+
+    // CRC placeholder (ID: 63, Length: 04)
+    payload += '63' + '04' + '0000';
+
+    // Calculate and append CRC
+    const crc = crc16(payload);
+    return payload.slice(0, -4) + crc;
+}
+
+// Generate QR code in a container element (EMVCo-compliant with embedded amount)
+function generatePromptPayQR(element, amount, merchantId) {
+    element.innerHTML = '';
+    const formattedAmount = parseFloat(amount).toFixed(2);
+    const id = merchantId || PEMPAY_TAX_ID;
+    
+    const img = document.createElement('img');
+    img.src = 'https://promptpay.io/' + PEMPAY_TAX_ID + '/' + formattedAmount;
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'contain';
+    img.alt = 'PromptPay QR ' + formattedAmount + ' บาท';
+    img.onload = function() {};
+    img.onerror = function() {
+        if (typeof QRCode !== 'undefined' && QRCode.toCanvas) {
+            const payload = generatePromptPayPayload(amount, id);
+            const canvas = document.createElement('canvas');
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            QRCode.toCanvas(canvas, payload, {
+                width: 200,
+                margin: 2,
+                color: { dark: '#000000', light: '#ffffff' }
+            }).catch(() => {
+                element.innerHTML = '<img src="src/asset/promptpay-qr.png" style="width:100%;height:100%;object-fit:contain">';
+            });
+            element.appendChild(canvas);
+        } else {
+            element.innerHTML = '<img src="src/asset/promptpay-qr.png" style="width:100%;height:100%;object-fit:contain">';
+        }
+    };
+    element.appendChild(img);
+}
+
+// Get PromptPay QR URL for external use
 function getPromptPayQRUrl(amount, ref) {
-  const taxId = '0994000160208';
-  return `https://promptpay.io/${taxId}/${amount}?ref=${encodeURIComponent(ref)}`;
+    const formattedAmount = parseFloat(amount).toFixed(2);
+    return `https://promptpay.io/${PEMPAY_TAX_ID}/${formattedAmount}?ref=${encodeURIComponent(ref)}`;
 }
 
 // ===== TAB =====
@@ -177,15 +264,15 @@ let slipFile = null;
 let slipUploaded = false;
 
 function renderResult(row) {
-  currentBooking = row;
-  slipFile = null;
-  slipUploaded = false;
+    currentBooking = row;
+    slipFile = null;
+    slipUploaded = false;
 
-  const status = row.status || 'รอตรวจสอบ';
-  const statusPill = getStatusPill(status);
-  const visitorCount = parseInt(row.visitorCount) || 1;
-  const totalPersons = visitorCount + 1;
-  const total = parseInt(row.total) || totalPersons * 1000;
+    const status = row.status || 'รอตรวจสอบ';
+    const statusPill = getStatusPill(status);
+    const visitorCount = parseInt(row.visitorCount) || 1;
+    const totalPersons = visitorCount + 1;
+    const total = parseFloat(row.total) || (totalPersons * 1000);
 
   let visitorsDetailHtml = '';
   const mainAppr = (row.visitorApproved || '').trim();
@@ -305,7 +392,7 @@ function renderResult(row) {
         </div>
         
         <div style="margin: 10px auto 15px; width: 200px; height: 200px; background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
-          <img src="${getPromptPayQRUrl(total, row.ref)}" alt="PromptPay QR Code" style="width: 100%; height: 100%; object-fit: contain;" onerror="this.src='src/asset/promptpay-qr.png'">
+          <div id="qrcodeContainer"></div>
         </div>
 
         <div style="font-size:16px;font-weight:700;color:#0a4a55;margin-bottom:4px;">ทัณฑสถานบำบัดพิเศษกลาง</div>
@@ -384,12 +471,22 @@ function getStatusPill(status) {
 
 // ===== SHOW/HIDE PAYMENT =====
 function showPayment() {
-  document.getElementById('paymentArea').style.display = 'none';
-  document.getElementById('paymentForm').style.display = 'block';
-  setTimeout(() => {
-    const el = document.getElementById('paymentForm');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 50);
+    if (!currentBooking) return;
+    const total = parseFloat(currentBooking.total) || ((parseInt(currentBooking.visitorCount) || 1) + 1) * 1000;
+    const totalPersons = (parseInt(currentBooking.visitorCount) || 1) + 1;
+    
+    if (confirm('ยืนยันยอดชำระเงิน\n\nยอดที่ต้องชำระ: ' + total.toLocaleString() + ' บาท\n(' + totalPersons + ' คน × 1,000 บาท)\n\nกด OK เพื่อแสดง QR Code หรือ Cancel เพื่อยกเลิก')) {
+        document.getElementById('paymentArea').style.display = 'none';
+        document.getElementById('paymentForm').style.display = 'block';
+        const qrContainer = document.getElementById('qrcodeContainer');
+        if (qrContainer) {
+            generatePromptPayQR(qrContainer, total);
+        }
+        setTimeout(() => {
+            const el = document.getElementById('paymentForm');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 50);
+    }
 }
 function hidePayment() {
   document.getElementById('paymentArea').style.display = 'block';
@@ -541,10 +638,10 @@ async function submitPayment() {
 }
 
 function showThankYou() {
-  const row = currentBooking;
-  const visitorCount = parseInt(row.visitorCount) || 1;
-  const totalPersons = visitorCount + 1;
-  const total = parseInt(row.total) || totalPersons * 1000;
+    const row = currentBooking;
+    const visitorCount = parseInt(row.visitorCount) || 1;
+    const totalPersons = visitorCount + 1;
+    const total = parseFloat(row.total) || totalPersons * 1000;
 
   document.getElementById('resultArea').style.display = 'none';
   document.getElementById('thankYouArea').style.display = 'block';
