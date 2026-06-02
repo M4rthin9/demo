@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>จองคิวเพื่อร่วมกิจกรรมโครงการจัดการเรียนรู้
+การฝึกวิชาชีพด้านอาหารและงานบริการฯ — ทัณฑสถานบำบัดพิเศษกลาง ร้าน Chance & Change Cafe</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler-icons-webfont@latest/tabler-icons.min.css">
+<link rel="stylesheet" href="src/css/booking.css">
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <a href="index.html" class="back-link"><i class="ti ti-arrow-left"></i> หน้าหลัก</a>
+    <div class="badge">จองคิวเพื่อเข้าร่วมกิจกรรม</div>
+    <h1>โครงการการจัดการเรียนรู้การฝึกวิชาชีพด้านอาหารฯ</h1>
+    <p>ทัณฑสถานบำบัดพิเศษกลาง · กรอกข้อมูลให้ครบถ้วนเพื่อจอง</p>
+  </div>
+
+  <!-- Steps -->
+  <div class="steps-bar">
+    <div class="step-item">
+      <div class="step-circle active" id="sc1">1</div>
+      <div class="step-label active" id="sl1">ข้อมูลการจอง</div>
+    </div>
+    <div class="step-line" id="line1"></div>
+    <div class="step-item">
+      <div class="step-circle" id="sc2">2</div>
+      <div class="step-label" id="sl2">ยืนยันข้อมูล</div>
+    </div>
+    <div class="step-line" id="line2"></div>
+    <div class="step-item">
+      <div class="step-circle" id="sc3">3</div>
+      <div class="step-label" id="sl3">รับเลขอ้างอิง</div>
+    </div>
+  </div>
+
+  <!-- ===== PAGE 1: FORM ===== -->
+  <div class="page active" id="page1">
+
+    <div class="section">
+      <div class="section-title"><i class="ti ti-user"></i> ข้อมูลผู้เข้าร่วมกิจกรรม</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>ชื่อ-นามสกุล <span style="color:var(--red)">*</span></label>
+          <input type="text" id="visitorName" placeholder="เช่น สมชาย ใจดี">
+        </div>
+        <div class="form-group">
+          <label>เลขบัตรประชาชน <span style="color:var(--red)">*</span></label>
+          <input type="text" id="visitorId" placeholder="X-XXXX-XXXXX-XX-X" maxlength="17">
+        </div>
+        <div class="form-group">
+          <label>หมายเลขโทรศัพท์ <span style="color:var(--red)">*</span></label>
+          <input type="tel" id="visitorPhone" placeholder="08X-XXX-XXXX">
+        </div>
+        <div class="form-group">
+          <label>ความสัมพันธ์ <span style="color:var(--red)">*</span></label>
+          <select id="relation">
+            <option value="">-- เลือก --</option>
+            <option>บิดา / มารดา</option><option>แฟน/ภรรยา</option><option>บุตร / ธิดา</option>
+            <option>พี่ / น้อง</option><option>ญาติ</option><option>เพื่อน</option>
+            <option>ทนายความ</option><option>อื่น ๆ</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>ศาสนา <span style="color:var(--red)">*</span></label>
+          <select id="visitorReligion">
+            <option value="">-- เลือก --</option>
+            <option>พุทธ</option>
+            <option>อิสลาม</option>
+            <option>คริสต์</option>
+            <option>อื่น ๆ</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>การแพ้อาหาร <span style="color:var(--red)">*</span></label>
+          <input type="text" id="visitorAllergy" placeholder="ระบุอาการแพ้ หรือ 'ไม่มี'">
+        </div>
+        <div class="form-group full">
+          <label>จำนวนผู้เข้าร่วมกิจกรรม <span style="color:var(--red)">*</span> <span style="font-weight:400;color:var(--text2)">(ไม่รวมผู้ต้องขัง · สูงสุด 10 คน)</span></label>
+          <select id="visitorCount" onchange="updateExtraVisitors()">
+            <option value="1">1 คน</option><option value="2">2 คน</option><option value="3">3 คน</option>
+            <option value="4">4 คน</option><option value="5">5 คน</option><option value="6">6 คน</option>
+            <option value="7">7 คน</option><option value="8">8 คน</option><option value="9">9 คน</option>
+            <option value="10">10 คน</option>
+          </select>
+        </div>
+        <div id="extraVisitorsContainer" class="form-group full" style="display:none">
+          <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px;border-top:1px solid var(--border);padding-top:12px;">
+            ชื่อเข้าร่วมกิจกรรมเพิ่มเติม <span style="font-weight:400">(ผู้เข้าร่วมกิจกรรมคนที่ 2 เป็นต้นไป)</span>
+          </div>
+          <div id="extraVisitorsList" class="form-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><i class="ti ti-lock"></i> ข้อมูลผู้ต้องขัง</div>
+
+      <!-- Prisoner search (REQUIRED - no manual typing for name/id/wing) -->
+      <div class="prisoner-search">
+        <label style="font-size:12px;color:var(--text2);margin-bottom:4px;display:block;">
+          🔍 ค้นหาจากฐานข้อมูลผู้ต้องขัง <span style="color:var(--red)">*</span> (เลือกจากรายชื่อเพื่อแสดงข้อมูล)
+        </label>
+        <input type="text" id="prisonerSearch" placeholder="พิมพ์เลขผู้ต้องขัง หรือ ชื่อ-นามสกุล..." oninput="filterPrisonerSuggestions()">
+        <div id="prisonerSuggestions" class="suggestions-dropdown"></div>
+        <div id="prisonerLoadStatus" style="font-size:11px;margin-top:6px;color:var(--text2);"></div>
+        <div id="prisonerMatchStatus" style="font-size:11px;margin-top:4px;color:var(--green);display:none;"></div>
+      </div>
+
+      <!-- Selected prisoner display (read-only, centered + bigger for clarity) -->
+      <div id="selectedPrisonerDisplay" style="display:none; text-align:center; background:var(--green-light); border:2px solid var(--green); border-radius:10px; padding:14px 16px; margin-bottom:10px;">
+        <div style="font-size:12px; color:var(--green); font-weight:600; margin-bottom:6px;">✅ ข้อมูลผู้ต้องขังที่เลือก</div>
+        <div style="font-weight:700; font-size:18px; color:var(--text); margin-bottom:4px;" id="dispPrisonerName"></div>
+        <div style="font-size:14px; color:var(--text);">
+          เลข: <span id="dispPrisonerId" style="font-family:monospace; font-weight:600;"></span> &nbsp;·&nbsp; <span id="dispWing" style="color:var(--blue);font-weight:700;"></span>
+        </div>
+      </div>
+
+      <!-- Hidden fields (values set only via search selection) -->
+      <input type="hidden" id="prisonerName">
+      <input type="hidden" id="prisonerId">
+      <input type="hidden" id="wing">
+
+      <div style="font-size:11px;color:var(--text2);margin-top:6px;">
+        💡 ค้นหาแล้วคลิกเลือกจากรายการด้านบน — ชื่อ + เลข + แดน จะแสดงอัตโนมัติ (ไม่ต้องพิมเอง)
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><i class="ti ti-calendar"></i> วันที่ต้องการเข้าร่วมกิจกรรม</div>
+      <div class="cal-header">
+        <button class="cal-nav" onclick="changeMonth(-1)">&#8249;</button>
+        <span id="calTitle" style="font-size:14px;font-weight:600;color:var(--text)"></span>
+        <button class="cal-nav" onclick="changeMonth(1)">&#8250;</button>
+      </div>
+      <div class="day-names">
+        <div class="day-name">อา</div><div class="day-name">จ</div><div class="day-name">อ</div>
+        <div class="day-name">พ</div><div class="day-name">พฤ</div><div class="day-name">ศ</div><div class="day-name">ส</div>
+      </div>
+      <div class="date-grid" id="dateGrid"></div>
+      <div class="selected-date-display" id="selectedDateDisplay"></div>
+      <div class="quota-info">
+        <span><span class="quota-dot" style="background:var(--blue)"></span>ว่าง</span>
+        <span><span class="quota-dot" style="background:var(--red)"></span>เต็ม (20/20)</span>
+        <span><span class="quota-dot" style="background:var(--border)"></span>ผ่านแล้ว</span>
+        <span><span class="quota-dot" style="background:#fcc"></span>หยุด/วันหยุดราชการ</span>
+      </div>
+    </div>
+
+    <div class="rules">
+      <strong>ข้อปฏิบัติ:</strong><br> ผู้เข้าร่วมกิจกรรมต้องแสดงบัตรประชาชนตัวจริง · ห้ามนำโทรศัพท์เข้าพื้นที่เยี่ยม<br>
+      รับจองวันละ <strong>20 โต๊ะ</strong> · ค่าร่วมกิจกรรม <strong>1,000 บาท / คน</strong> (คิดรวมผู้ต้องขัง 1 คนด้วย)<br>
+      <span style="color:#2E5238">บุตร/ธิดา (ผู้เข้าร่วมคนที่ 2+): อายุ &lt;5 ปี ฟรี, 5-8 ปี 500 บาท, &gt;8 ปี 1,000 บาท</span><br>
+      <strong>สิ่งที่จะได้จากการเข้าร่วมกิจกรรม:</strong> <br>ภายในกิจกรรมจะมีอาหารเป็น Fine Dining เสิร์ฟให้ผู้เข้าร่วมจำนวน 6 คอร์ส<br>
+      ชำระเงินได้หลังเจ้าหน้าที่ <strong>ตรวจสอบและอนุมัติ</strong> การจองแล้วเท่านั้น
+    </div>
+
+    <div class="consent-row">
+      <input type="checkbox" id="consent">
+      <label for="consent">ข้าพเจ้ายืนยันว่าข้อมูลที่กรอกเป็นความจริงและยินยอมให้เจ้าหน้าที่ตรวจสอบประวัติวินัยของผู้ต้องขัง</label>
+    </div>
+
+    <button class="btn-primary" onclick="goToConfirm()">
+      ถัดไป: ยืนยันข้อมูล <i class="ti ti-arrow-right"></i>
+    </button>
+  </div>
+
+  <!-- ===== PAGE 2: CONFIRM ===== -->
+  <div class="page" id="page2">
+    <div class="section">
+      <div class="section-title"><i class="ti ti-clipboard-check"></i> ตรวจสอบข้อมูลการจอง</div>
+      <div class="summary-card" id="confirmSummary"></div>
+    </div>
+
+    <div class="rules" style="border-left-color:var(--gold);background:var(--gold-light);">
+      <strong>⏳ หลังส่งคำขอจอง:</strong> เจ้าหน้าที่จะตรวจสอบประวัติวินัยของผู้ต้องขัง (1–2 วันทำการ)<br>
+      <strong>🔍 ตรวจสอบสถานะ:</strong> ใช้ <strong>Ref No.</strong> หรือ <strong>เลขผู้ต้องขัง</strong> ในหน้า "ตรวจสอบสถานะ"<br>
+      <strong>💰 ชำระเงิน:</strong> เมื่อสถานะ "อนุมัติ" จะมีลิงก์ชำระเงินให้ดำเนินการต่อ
+    </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:1rem">
+      <button class="btn-secondary" onclick="goBack()" style="flex:0.45">
+        <i class="ti ti-arrow-left"></i> แก้ไข
+      </button>
+      <button class="btn-primary" onclick="submitBooking()" style="flex:1" id="submitBtn">
+        <i class="ti ti-send"></i> ส่งคำขอจอง
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== PAGE 3: SUCCESS ===== -->
+  <div class="page" id="page3">
+    <div class="success-page">
+      <div class="success-icon">📋</div>
+      <h2 style="font-size:22px;font-weight:700;margin-bottom:6px">ส่งคำขอจองสำเร็จ!</h2>
+      <p style="font-size:14px;color:var(--text2);margin-bottom:1rem">เจ้าหน้าที่จะตรวจสอบประวัติวินัยและดำเนินการภายใน 1–2 วันทำการ</p>
+
+      <div class="status-pill status-pending">⏳ รอตรวจสอบวินัย</div>
+
+      <div class="ref-box">
+        <div class="ref-label">เลขอ้างอิง (Ref No.)</div>
+        <span id="refNumber">VIS-00000</span>
+      </div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:1.5rem">กรุณาบันทึกเลขอ้างอิงนี้ไว้ · ใช้ตรวจสอบสถานะการจอง</p>
+
+      <div id="finalSummary" style="background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border);padding:14px;text-align:left;margin-bottom:1.5rem;font-size:13px;line-height:2.2"></div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+        <a href="status.html" class="btn-primary" style="text-decoration:none;flex:1;min-width:180px">
+          <i class="ti ti-search"></i> ตรวจสอบสถานะ
+        </a>
+        <button class="btn-secondary" onclick="copyRef()" style="flex:0.6;min-width:130px" id="copyRefBtn">
+          <i class="ti ti-copy"></i> คัดลอก Ref
+        </button>
+      </div>
+
+      <button class="btn-secondary" style="margin-top:10px" onclick="resetAll()">
+        <i class="ti ti-plus"></i> ทำรายการใหม่
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Overlay -->
+<div class="overlay" id="overlay">
+  <div class="spinner"></div>
+  <p>กำลังส่งคำขอ...</p>
+</div>
+
+  <script src="src/js/booking.js" defer></script>
+ 
+  <div style="text-align:center;padding:12px 8px 24px;font-size:11px;color:#6B7280;">
+    กรมราชทัณฑ์ · <a href="https://main.correct.go.th" target="_blank" rel="noopener" style="color:#0B2545;text-decoration:underline;">main.correct.go.th</a>
+  </div>
+</body>
+</html>
+

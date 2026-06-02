@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ตรวจสอบสถานะการจอง — ทัณฑสถานบำบัดพิเศษกลาง ร้าน Chance & Change Cafe</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link rel="stylesheet" href="src/css/status.css">
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <a href="index.html" class="back-link"><i class="ti ti-arrow-left"></i> หน้าหลัก</a>
+    <div class="badge">ตรวจสอบสถานะ</div>
+    <h1>ตรวจสอบสถานะการจอง</h1>
+    <p>ใช้เลขอ้างอิง (Ref No.) หรือเลขประจำตัวผู้ต้องขัง</p>
+  </div>
+
+  <div class="search-section">
+    <div class="section-title"><i class="ti ti-search"></i> ค้นหาการจอง</div>
+
+    <div class="search-tabs">
+      <button class="tab-btn active" id="tabRef" onclick="switchTab('ref')">
+        <i class="ti ti-hash"></i> Ref No.
+      </button>
+      <button class="tab-btn" id="tabPrisoner" onclick="switchTab('prisoner')">
+        <i class="ti ti-lock"></i> เลขผู้ต้องขัง
+      </button>
+    </div>
+
+    <div class="tab-content active" id="tabContentRef">
+      <label>เลขอ้างอิง (เช่น VIS-12345)</label>
+      <input type="text" id="searchRef" placeholder="VIS-XXXXX" style="text-transform:uppercase;letter-spacing:1px"
+        onkeydown="if(event.key==='Enter') doSearch()">
+    </div>
+    <div class="tab-content" id="tabContentPrisoner">
+      <label>หมายเลขผู้ต้องขัง</label>
+      <input type="text" id="searchPrisoner" placeholder="เช่น 12345678"
+        onkeydown="if(event.key==='Enter') doSearch()">
+    </div>
+
+    <div style="margin-top:12px">
+      <button class="btn-primary" id="searchBtn" onclick="doSearch()">
+        <i class="ti ti-search"></i> ตรวจสอบสถานะ
+      </button>
+    </div>
+  </div>
+
+  <div id="resultArea"></div>
+
+  <div id="thankYouArea">
+    <div class="thankyou-page">
+      <div class="success-icon-big">🎉</div>
+      <h2 style="font-size:22px;font-weight:700;margin-bottom:8px">ชำระเงินและจองสำเร็จ!</h2>
+      <p style="font-size:14px;color:var(--text2);margin-bottom:1rem">เจ้าหน้าที่จะยืนยันนัดหมายผ่านโทรศัพท์ภายใน 1 วันทำการ</p>
+
+      <div class="ref-box-sm">
+        <div class="ref-label">เลขอ้างอิง</div>
+        <span id="tyRefNumber">VIS-00000</span>
+      </div>
+
+      <div id="tySummary" style="background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border);padding:14px;text-align:left;margin:1rem 0;font-size:13px;line-height:2.2"></div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:1rem">
+        <button class="btn-secondary" onclick="resetSearch()" style="flex:1;min-width:160px">
+          <i class="ti ti-search"></i> ค้นหาอีกครั้ง
+        </button>
+        <a href="index.html" class="btn-primary" style="text-decoration:none;flex:1;min-width:160px">
+          <i class="ti ti-home"></i> กลับหน้าหลัก
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="spinner"></div>
+  <p id="overlayMsg">กำลังค้นหา...</p>
+</div>
+
+  <script src="src/js/status.js" defer></script>
+ 
+  <div style="text-align:center;padding:12px 8px 24px;font-size:11px;color:#6B7280;">
+    กรมราชทัณฑ์ · <a href="https://main.correct.go.th" target="_blank" rel="noopener" style="color:#0B2545;text-decoration:underline;">main.correct.go.th</a>
+  </div>
+</body>
+</html>
