@@ -911,16 +911,16 @@ ${extras.length > 0 ? `<div class="detail-row">
         </div>` : ''}
       </div>
       
-      ${extras.filter(v => v.birthCertName).length > 0 ? `<div class="detail-row">
-          <span class="detail-label">📎 ไฟล์ใบสูติบัตร</span>
-          <span class="detail-value"><button class="btn-secondary" style="font-size:12px;padding:6px 12px" onclick="showBirthCertPreviews()">ดูใบสูติบัตร (${extras.filter(v => v.birthCertName).length} ไฟล์)</button></span>
-        </div>` : ''}
+${allBirthCertsNames ? `<div class="detail-row">
+           <span class="detail-label">📎 ไฟล์ใบสูติบัตร</span>
+           <span class="detail-value"><button class="btn-secondary" style="font-size:12px;padding:6px 12px" onclick="showBirthCertPreviews()">ดูใบสูติบัตร (${[mainBirthCertName, ...extras.map(v => v.birthCertName)].filter(Boolean).length} ไฟล์)</button></span>
+         </div>` : ''}
       
       <div style="font-size:11px;color:#888;text-align:center;margin-top:12px">ใช้ปุ่ม "ตรวจสอบสถานะ" เพื่อติดตาม หรือคัดลอก Ref ด้านบน</div>
-    `;
-    
-    window.birthCertFilesToPreview = extras.map(v => ({name: v.birthCertName, type: 'image/jpeg'})).filter(v => v.name);
-    sessionStorage.setItem('birthCertFiles', JSON.stringify(window.birthCertFilesToPreview.map(f => f.name)));
+`;
+     
+     window.birthCertPreviews = [mainBirthCertBase64, ...extras.map(v => v.birthCertBase64)].filter(Boolean);
+     sessionStorage.setItem('birthCertFiles', JSON.stringify([mainBirthCertName, ...extras.map(v => v.birthCertName)].filter(Boolean)));
 
   // Store ref in sessionStorage for status page
   try {
@@ -941,49 +941,37 @@ function copyRef() {
  }
 
 function showBirthCertPreviews() {
-   const files = window.birthCertFilesToPreview || [];
-   if (!files.length) return;
-   
-   // สร้าง modal สำหรับแสดง preview
-   const modal = document.createElement('div');
-   modal.id = 'birthCertModal';
-   modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000;';
-   modal.innerHTML = `
-     <div style="background:white;border-radius:12px;padding:20px;max-width:90%;max-height:90%;overflow:auto;">
-       <h3 style="margin-top:0;margin-bottom:12px">ใบสูติบัตรที่อัพโหลด</h3>
-       <div id="birthCertGallery" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;"></div>
-       <button onclick="document.getElementById('birthCertModal').remove()" style="margin-top:16px;padding:8px 16px;background:#0B2545;color:white;border:none;border-radius:6px;cursor:pointer;">ปิด</button>
-     </div>
-   `;
-   document.body.appendChild(modal);
-   
-   // แสดงรูปภาพ
-   const gallery = modal.querySelector('#birthCertGallery');
-   files.forEach((f, i) => {
-     if (f.type.startsWith('image/')) {
-       const reader = new FileReader();
-       reader.onload = function(e) {
-         const div = document.createElement('div');
-         div.style.cssText = 'border:1px solid #ddd;border-radius:8px;padding:8px;text-align:center;';
-         div.innerHTML = `
-           <img src="${e.target.result}" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:4px;cursor:pointer;" onclick="window.open('${e.target.result}','_blank')">
-           <div style="font-size:11px;margin-top:4px;word-break:break-all;">${f.name}</div>
-         `;
-         gallery.appendChild(div);
-       };
-       reader.readAsDataURL(f);
-     } else {
-       // แสดงไฟล์ที่ไม่ใช่รูปภาพ
-       const div = document.createElement('div');
-       div.style.cssText = 'border:1px solid #ddd;border-radius:8px;padding:12px;text-align:center;background:#f8f9fa;';
-       div.innerHTML = `<div style="font-size:32px;color:var(--blue);">📄</div>
-         <div style="font-size:12px;margin-top:4px;">${f.name}</div>
-         <div style="font-size:10px;color:var(--text2);">ไฟล์ PDF/เอกสาร</div>
-       `;
-       gallery.appendChild(div);
-     }
-   });
- }
+   const previews = window.birthCertPreviews || [];
+   const names = JSON.parse(sessionStorage.getItem('birthCertFiles') || '[]');
+  if (!previews.length) return;
+    
+    // สร้าง modal สำหรับแสดง preview
+    const modal = document.createElement('div');
+    modal.id = 'birthCertModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000;';
+    modal.innerHTML = `
+      <div style="background:white;border-radius:12px;padding:20px;max-width:90%;max-height:90%;overflow:auto;">
+        <h3 style="margin-top:0;margin-bottom:12px">ใบสูติบัตรที่อัพโหลด</h3>
+        <div id="birthCertGallery" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;"></div>
+        <button onclick="document.getElementById('birthCertModal').remove()" style="margin-top:16px;padding:8px 16px;background:#0B2545;color:white;border:none;border-radius:6px;cursor:pointer;">ปิด</button>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // แสดงรูปภาพจาก base64 data
+    const gallery = modal.querySelector('#birthCertGallery');
+   previews.forEach((b64, i) => {
+      if (b64) {
+        const div = document.createElement('div');
+        div.style.cssText = 'border:1px solid #ddd;border-radius:8px;padding:8px;text-align:center;';
+        div.innerHTML = `
+          <img src="${b64}" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:4px;cursor:pointer;" onclick="window.open('${b64}','_blank')">
+          <div style="font-size:11px;margin-top:4px;word-break:break-all;">${names[i] || 'ไฟล์ ' + (i+1)}</div>
+        `;
+        gallery.appendChild(div);
+      }
+    });
+  }
 
 function showPage(n) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
