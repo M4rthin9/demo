@@ -393,8 +393,8 @@ logEvent(username, 'create_role', roleName, { permissions: permissionsInput });
     return jsonResp({ status: 'ok', ref: body.ref });
   }
 
-  // ===== Public actions (no login required) =====
- const publicActions = ['uploadSlip', 'updateSlipAndStatus'];
+// ===== Public actions (no login required) =====
+  const publicActions = ['uploadSlip', 'uploadBirthCert', 'updateSlipAndStatus'];
  if (publicActions.includes(action) && (username === 'public' || !username)) {
    // allow public slip upload / payment confirmation
  } else if (!publicActions.includes(action) && !isAuthorized(username, pass)) {
