@@ -326,11 +326,10 @@ return `<tr data-idx="${rowIdx}">
              </div>
            </td>
 <td data-label="จัดการ">
-               <div class="action-btns">
-                 <button class="btn-slip" onclick="viewSlip(${rowIdx})">🧾 สลิป</button>
-                 <button class="btn-slip" style="background:var(--blue-light);color:var(--blue);border-color:var(--blue)" onclick="viewDetail(${rowIdx})">📋 รายละเอียด</button>
-                 ${r.birthCertFiles && r.birthCertFiles.trim() ? `<button class="btn-slip" style="background:rgba(46,125,54,0.1);color:#2e7d32;border-color:#2e7d32" onclick="viewBirthCert('${r.birthCertFiles.replace(/'/g, "\\'")}')"><i class="ti ti-file"></i> ใบสูติบัตร</button>` : ''}
-               </div>
+              <div class="action-btns">
+                <button class="btn-slip" onclick="viewSlip(${rowIdx})">🧾 สลิป</button>
+                <button class="btn-slip" style="background:var(--blue-light);color:var(--blue);border-color:var(--blue)" onclick="viewDetail(${rowIdx})">📋 รายละเอียด</button>
+              </div>
               <div class="mobile-actions-expanded" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:${s === 'รอตรวจสอบวินัย' || s === 'รอตรวจสอบผู้เข้าร่วม' || s === 'รอชำระเงิน' || s === 'ชำระแล้ว' ? 'flex' : 'none'};flex-wrap:wrap;gap:6px">
                 ${canConfirmPayment && (s === 'รอชำระเงิน' || s === 'ชำระแล้ว') ? `<button class="btn-confirm-pay" onclick="confirmPayment(${rowIdx})">${s === 'ชำระแล้ว' ? '✅ เสร็จสิ้น' : '💳 ยืนยันชำระเงิน'}</button>` : ''}
                 ${canApproveDiscipline && s === 'รอตรวจสอบวินัย' ? `<button class="btn-approve" onclick="updateStatus(${rowIdx},'รอตรวจสอบผู้เข้าร่วม')">✓ อนุมัติวินัย</button>` : ''}
@@ -1578,65 +1577,59 @@ const va = r.visitorApproved || '';
    const canVisitorApproval = isAdminOrSuper || hasPermission('visitor_approval');
    const canApproveParticipant = isAdminOrSuper || hasPermission('approve_participant');
 
-const mainBirthCert = String(r.birthCertFiles || '').split(';;')[0] || '';
-    const visitor1Html = `
-      <div class="visitor-card">
-        <div class="vc-num">👤 ผู้ร่วมกิจกรรมคนที่ 1 (ผู้จอง)</div>
-        <div class="vc-name">${r.visitorName || '—'}</div>
-        <div class="vc-info">บัตร: ${r.visitorId || '—'} · โทร: ${r.visitorPhone || '—'} · ความสัมพันธ์: ${r.relation || '—'}</div>
-        <div class="vc-info">ศาสนา: ${r.religion || '—'} · แพ้อาหาร: ${r.allergy || '—'}</div>
-        ${mainBirthCert ? `<div class="vc-info" style="color:var(--green);margin-top:4px;">📎 ใบสูติบัตร: ${mainBirthCert} <button class="btn-view-birthcert" onclick="viewBirthCert('${mainBirthCert}')" style="font-size:11px;padding:2px 6px;margin-left:6px;background:var(--blue-light);color:var(--blue);border:1px solid var(--blue);border-radius:4px;cursor:pointer;">ดู</button></div>` : r.relation === 'บุตร / ธิดา' ? `<div class="vc-info" style="color:var(--red);margin-top:4px;">⚠️ ยังไม่มีใบสูติบัตร</div>` : ''}
-         <div class="visitor-approval">
-           <span class="lbl">สถานะ:</span>
-           <span class="approval-badge ${va==='yes'?'yes':va==='no'?'no':'pending'}">${getApprLabel(va)}</span>
-           ${canVisitorApproval ? `<button class="approval-btn yes" onclick="updateVisitorApproval(${idx},0,'yes')">✓</button>
-           <button class="approval-btn no" onclick="updateVisitorApproval(${idx},0,'no')">✗</button>` : ''}
-         </div>
-      </div>`;
+   const visitor1Html = `
+     <div class="visitor-card">
+       <div class="vc-num">👤 ผู้ร่วมกิจกรรมคนที่ 1 (ผู้จอง)</div>
+       <div class="vc-name">${r.visitorName || '—'}</div>
+       <div class="vc-info">บัตร: ${r.visitorId || '—'} · โทร: ${r.visitorPhone || '—'} · ความสัมพันธ์: ${r.relation || '—'}</div>
+       <div class="vc-info">ศาสนา: ${r.religion || '—'} · แพ้อาหาร: ${r.allergy || '—'}</div>
+        <div class="visitor-approval">
+          <span class="lbl">สถานะ:</span>
+          <span class="approval-badge ${va==='yes'?'yes':va==='no'?'no':'pending'}">${getApprLabel(va)}</span>
+          ${canVisitorApproval ? `<button class="approval-btn yes" onclick="updateVisitorApproval(${idx},0,'yes')">✓</button>
+          <button class="approval-btn no" onclick="updateVisitorApproval(${idx},0,'no')">✗</button>` : ''}
+        </div>
+     </div>`;
 
   let extraHtml = '';
   if (r.extraVisitorNames && r.extraVisitorNames.trim()) {
     const isNewFormat = r.extraVisitorNames.includes(';;') || r.extraVisitorNames.includes('|');
     let extras = [];
-if (isNewFormat) {
-       extras = r.extraVisitorNames.split(';;').map(e => {
-         const parts = e.split('|');
-         return { 
-           name: (parts[0]||'').trim(), 
-           id: (parts[1]||'').trim(), 
-           relation: (parts[2]||'').trim(),
-           age: (parts[3]||'').trim(),
-           birthCertName: (parts[4]||'').trim()
-         };
-       }).filter(e => e.name);
-     } else {
-       extras = r.extraVisitorNames.split(/,(?![^(]*\))/).map(e => {
-         const m = e.trim().match(/^(.+?)\s*\(([^,)]+?)(?:,\s*([^)]+))?\)$/);
-         if (m) return { name: m[1].trim(), id: (m[2]||'').trim(), relation: (m[3]||'').trim(), age: '', birthCertName: '' };
-         return { name: e.trim(), id: '', relation: '', age: '', birthCertName: '' };
-       }).filter(e => e.name);
-     }
+    if (isNewFormat) {
+      extras = r.extraVisitorNames.split(';;').map(e => {
+        const parts = e.split('|');
+        return { 
+          name: (parts[0]||'').trim(), 
+          id: (parts[1]||'').trim(), 
+          relation: (parts[2]||'').trim(),
+          age: (parts[3]||'').trim()
+        };
+      }).filter(e => e.name);
+    } else {
+      extras = r.extraVisitorNames.split(/,(?![^(]*\))/).map(e => {
+        const m = e.trim().match(/^(.+?)\s*\(([^,)]+?)(?:,\s*([^)]+))?\)$/);
+        if (m) return { name: m[1].trim(), id: (m[2]||'').trim(), relation: (m[3]||'').trim(), age: '' };
+        return { name: e.trim(), id: '', relation: '', age: '' };
+      }).filter(e => e.name);
+    }
 extras.forEach((v, i) => {
-        const infoParts = [];
-        if (v.id) infoParts.push('บัตร: ' + v.id);
-        if (v.relation) infoParts.push('ความสัมพันธ์: ' + v.relation);
-        if (v.age) infoParts.push('อายุ: ' + v.age + ' ปี');
-        const ea = String(r.extraVisitorApproved || '').split(';;')[i] || '';
-        const birthCertFile = String(r.birthCertFiles || '').split(';;')[i + 1] || '';
-        extraHtml += `
-          <div class="visitor-card">
-            <div class="vc-num">👤 ผู้ร่วมกิจกรรมคนที่ ${i + 2}</div>
-            <div class="vc-name">${v.name}</div>
-            ${infoParts.length ? '<div class="vc-info">' + infoParts.join(' · ') + '</div>' : ''}
-            ${birthCertFile ? `<div class="vc-info" style="color:var(--green);margin-top:4px;">📎 ใบสูติบัตร: ${birthCertFile} <button class="btn-view-birthcert" onclick="viewBirthCert('${birthCertFile}')" style="font-size:11px;padding:2px 6px;margin-left:6px;background:var(--blue-light);color:var(--blue);border:1px solid var(--blue);border-radius:4px;cursor:pointer;">ดู</button></div>` : v.relation === 'บุตร / ธิดา' ? `<div class="vc-info" style="color:var(--red);margin-top:4px;">⚠️ ยังไม่มีใบสูติบัตร</div>` : ''}
-             <div class="visitor-approval">
-               <span class="lbl">สถานะ:</span>
-               <span class="approval-badge ${ea==='yes'?'yes':ea==='no'?'no':'pending'}">${getApprLabel(ea)}</span>
-               ${canVisitorApproval ? `<button class="approval-btn yes" onclick="updateVisitorApproval(${idx},${i+1},'yes')">✓</button>
-               <button class="approval-btn no" onclick="updateVisitorApproval(${idx},${i+1},'no')">✗</button>` : ''}
-             </div>
-          </div>`;
-      });
+       const infoParts = [];
+       if (v.id) infoParts.push('บัตร: ' + v.id);
+       if (v.relation) infoParts.push('ความสัมพันธ์: ' + v.relation);
+       const ea = String(r.extraVisitorApproved || '').split(';;')[i] || '';
+       extraHtml += `
+         <div class="visitor-card">
+           <div class="vc-num">👤 ผู้ร่วมกิจกรรมคนที่ ${i + 2}</div>
+           <div class="vc-name">${v.name}</div>
+           ${infoParts.length ? '<div class="vc-info">' + infoParts.join(' · ') + '</div>' : ''}
+            <div class="visitor-approval">
+              <span class="lbl">สถานะ:</span>
+              <span class="approval-badge ${ea==='yes'?'yes':ea==='no'?'no':'pending'}">${getApprLabel(ea)}</span>
+              ${canVisitorApproval ? `<button class="approval-btn yes" onclick="updateVisitorApproval(${idx},${i+1},'yes')">✓</button>
+              <button class="approval-btn no" onclick="updateVisitorApproval(${idx},${i+1},'no')">✗</button>` : ''}
+            </div>
+         </div>`;
+     });
   }
 
   const totalPersons = (parseInt(r.visitorCount) || 1) + 1;
@@ -1697,57 +1690,9 @@ ${canApproveParticipant && s === 'รอตรวจสอบผู้เข้�
 }
 
 function closeDetailModal(e) {
-   if (!e || e.target === document.getElementById('detailModalBg')) {
-     document.getElementById('detailModalBg').classList.remove('show');
-   }
- }
-
- function viewBirthCert(birthCertValue) {
-  if (!birthCertValue) return;
-  
-  // birthCertValue อาจจะเป็น URL หรือชื่อไฟล์
-  const urls = String(birthCertValue).split(';;').filter(u => u.trim());
-  
-  if (!urls.length) {
-    alert('📎 ไฟล์ใบสูติบัตร: แจ้งเตือน\n\nเจ้าหน้าทีตรวจสอบได้จากการจองนี้');
-    return;
+  if (!e || e.target === document.getElementById('detailModalBg')) {
+    document.getElementById('detailModalBg').classList.remove('show');
   }
-
-  const isDriveUrl = urls.some(u => u.includes('drive.google.com') || u.includes('drive.usercontent.google.com'));
-
-  let html = '';
-  if (isDriveUrl) {
-    html = urls.map(url => {
-      // URL is already thumbnail format from server - use directly
-      // If it's a direct file URL, extract ID and convert to thumbnail
-      const fileIdMatch = url.match(/(?:[?&]id=|\/d\/|\/open\?id=|thumbnail\?id=)([a-zA-Z0-9_-]{10,})/);
-      const displayUrl = fileIdMatch ? `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}&sz=w1200` : url;
-      const openUrl = fileIdMatch && url.includes('thumbnail') 
-        ? `https://drive.google.com/file/d/${fileIdMatch[1]}/view` 
-        : url;
-      return `
-        <div style="margin:10px 0;text-align:center;">
-          <img src="${displayUrl}" style="max-width:100%;max-height:70vh;border-radius:8px;border:1px solid #ddd;" onerror="this.src='https://via.placeholder.com/400x300?text=ไม่สามารถโหลดรูปได้'">
-          <br><a href="${openUrl}" target="_blank" rel="noopener" style="font-size:12px;color:var(--blue);">เปิดในแท็บใหม่</a>
-        </div>
-      `;
-    }).join('');
-  } else {
-    html = '<p style="color:var(--text2);text-align:center;">📎 ไฟล์ที่อัพโหลด:</p>' +
-      urls.map(name => `<div style="font-size:13px;padding:4px 0;">• ${name}</div>`).join('');
-  }
-
-  const modal = document.createElement('div');
-  modal.id = 'birthCertModal';
-  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000;';
-  modal.innerHTML = `
-    <div style="background:white;border-radius:12px;padding:20px;max-width:90%;max-height:90%;overflow:auto;">
-      <h3 style="margin-top:0;margin-bottom:12px">📎 ใบสูติบัตร</h3>
-      <div>${html}</div>
-      <button onclick="document.getElementById('birthCertModal').remove()" style="margin-top:16px;padding:8px 16px;background:#0B2545;color:white;border:none;border-radius:6px;cursor:pointer;">ปิด</button>
-    </div>
-  `;
-  document.body.appendChild(modal);
 }
 
 async function approveParticipantInDetail(idx) {

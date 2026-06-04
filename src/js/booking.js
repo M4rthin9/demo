@@ -120,44 +120,7 @@ function selectDate(dateStr, blocked) {
   renderCalendar();
 }
 
-function updateBirthCertStatus(input, idx) {
-   const statusEl = document.getElementById('birthCertStatus' + idx);
-   if (!statusEl) return;
-   if (input.files && input.files[0]) {
-     statusEl.textContent = '✓ อัพโหลดแล้ว: ' + input.files[0].name;
-     statusEl.style.color = 'var(--green)';
-   } else {
-     statusEl.textContent = '';
-   }
- }
-
- function updateMainBirthCertStatus(input) {
-   const statusEl = document.getElementById('mainBirthCertStatus');
-   if (!statusEl) return;
-   if (input.files && input.files[0]) {
-     statusEl.textContent = '✓ อัพโหลดแล้ว: ' + input.files[0].name;
-     statusEl.style.color = 'var(--green)';
-   } else {
-     statusEl.textContent = '';
-   }
- }
-
- function toggleMainBirthCert() {
-   const rel = document.getElementById('relation').value;
-   const group = document.getElementById('mainVisitorBirthCertGroup');
-   if (!group) return;
-   if (rel === 'บุตร / ธิดา') {
-     group.style.display = 'block';
-   } else {
-     group.style.display = 'none';
-     const inp = document.getElementById('mainVisitorBirthCert');
-     if (inp) inp.value = '';
-     const st = document.getElementById('mainBirthCertStatus');
-     if (st) st.textContent = '';
-   }
- }
-
- // ===== EXTRA VISITORS =====
+// ===== EXTRA VISITORS =====
 function updateExtraVisitors() {
   const n = parseInt(document.getElementById('visitorCount').value);
   const container = document.getElementById('extraVisitorsContainer');
@@ -187,15 +150,10 @@ function updateExtraVisitors() {
       '</div>' +
       '<div class="form-group"><label>ความสัมพันธ์ <span style=\"color:var(--red)\">*</span></label>' +
       '<select id="extraVisitorRelation' + i + '">' + relOpts + '</select></div>' +
-'<div class="form-group" id="ageGroup' + i + '" style="display:none;margin-top:6px;">' +
-       '<label>อายุ (ปี) <span style=\"color:var(--red)\">*</span></label>' +
-       '<input type="number" id="extraVisitorAge' + i + '" min="0" max="120" placeholder="อายุ (ปี) · <5 ฟรี, 5-8=500, >8=1000">' +
-       '</div>' +
-'<div class="form-group" id="birthCertGroup' + i + '" style="display:none;margin-top:6px;">' +
-       '<label>อัพโหลดใบสูติบัตร <span style="color:var(--red)">*</span></label>' +
-       '<input type="file" id="extraVisitorBirthCert' + i + '" accept="image/*" capture="environment" onchange="updateBirthCertStatus(this, ' + i + ')">' +
-       '<span id="birthCertStatus' + i + '" style="font-size:11px;display:block;margin-top:4px;color:var(--text2)"></span>' +
-       '</div>';
+      '<div class="form-group" id="ageGroup' + i + '" style="display:none;margin-top:6px;">' +
+      '<label>อายุ (ปี) <span style=\"color:var(--red)\">*</span></label>' +
+      '<input type="number" id="extraVisitorAge' + i + '" min="0" max="120" placeholder="อายุ (ปี) · <5 ฟรี, 5-8=500, >8=1000">' +
+      '</div>';
     list.appendChild(div);
     // attach conditional age field for บุตร/ธิดา
     const relEl = div.querySelector('#extraVisitorRelation' + i);
@@ -203,17 +161,12 @@ function updateExtraVisitors() {
       relEl.onchange = function() {
         const ag = document.getElementById('ageGroup' + i);
         const ai = document.getElementById('extraVisitorAge' + i);
-        const bcg = document.getElementById('birthCertGroup' + i);
         if (!ag) return;
         if (this.value === 'บุตร / ธิดา') {
           ag.style.display = 'block';
-          bcg.style.display = 'block';
         } else {
           ag.style.display = 'none';
-          bcg.style.display = 'none';
           if (ai) ai.value = '';
-          const bci = document.getElementById('extraVisitorBirthCert' + i);
-          if (bci) bci.value = '';
         }
       };
     }
@@ -221,49 +174,26 @@ function updateExtraVisitors() {
 }
 
 function getExtraVisitors() {
-   const n = parseInt(document.getElementById('visitorCount').value);
-   const extras = [];
-   for (let i = 2; i <= n; i++) {
-     const nameEl = document.getElementById('extraVisitorName' + i);
-     const idEl   = document.getElementById('extraVisitorId' + i);
-     const relEl  = document.getElementById('extraVisitorRelation' + i);
-     const ageEl  = document.getElementById('extraVisitorAge' + i);
-     const religionEl = document.getElementById('extraVisitorReligion' + i);
-     const allergyEl  = document.getElementById('extraVisitorAllergy' + i);
-     const birthCertEl = document.getElementById('extraVisitorBirthCert' + i);
-     if (nameEl) extras.push({
-       name: nameEl.value.trim(),
-       id: idEl ? idEl.value.trim() : '',
-       relation: relEl ? relEl.value : '',
-       age: ageEl ? ageEl.value.trim() : '',
-       religion: religionEl ? religionEl.value : '',
-       allergy: allergyEl ? allergyEl.value.trim() : '',
-       birthCertEl: birthCertEl
-     });
-   }
-   return extras;
- }
-
-function readFileAsBase64(file) {
-    return new Promise((resolve, reject) => {
-      if (!file) { resolve(null); return; }
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+  const n = parseInt(document.getElementById('visitorCount').value);
+  const extras = [];
+  for (let i = 2; i <= n; i++) {
+    const nameEl = document.getElementById('extraVisitorName' + i);
+    const idEl   = document.getElementById('extraVisitorId' + i);
+    const relEl  = document.getElementById('extraVisitorRelation' + i);
+    const ageEl  = document.getElementById('extraVisitorAge' + i);
+    const religionEl = document.getElementById('extraVisitorReligion' + i);
+    const allergyEl  = document.getElementById('extraVisitorAllergy' + i);
+    if (nameEl) extras.push({
+      name: nameEl.value.trim(),
+      id: idEl ? idEl.value.trim() : '',
+      relation: relEl ? relEl.value : '',
+      age: ageEl ? ageEl.value.trim() : '',
+      religion: religionEl ? religionEl.value : '',
+      allergy: allergyEl ? allergyEl.value.trim() : ''
     });
   }
-
- async function getExtraVisitorsAsync() {
-   const extras = getExtraVisitors();
-   for (let i = 0; i < extras.length; i++) {
-     const file = extras[i].birthCertEl && extras[i].birthCertEl.files && extras[i].birthCertEl.files[0];
-     extras[i].birthCertBase64 = file ? await readFileAsBase64(file) : null;
-     extras[i].birthCertName = file ? file.name : '';
-     delete extras[i].birthCertEl;
-   }
-   return extras;
- }
+  return extras;
+}
 
 function calculateTotal() {
   const n = parseInt(document.getElementById('visitorCount').value) || 1;
@@ -554,21 +484,10 @@ function validate() {
   if (!mainReligion.value.trim()) { alert('กรุณาเลือกศาสนา'); mainReligion.focus(); return false; }
   
   // Validate main visitor allergy (required)
-   const mainAllergy = document.getElementById('visitorAllergy');
-   if (!mainAllergy.value.trim()) { alert('กรุณาระบุการแพ้อาหาร (ถ้าไม่มีให้กรอก \"ไม่มี\")'); mainAllergy.focus(); return false; }
-   
-   // Validate main visitor birth cert (if relation = บุตร/ธิดา)
-   const mainRelation = document.getElementById('relation').value;
-   if (mainRelation === 'บุตร / ธิดา') {
-     const mainBirthCertEl = document.getElementById('mainVisitorBirthCert');
-     if (!mainBirthCertEl || !mainBirthCertEl.files || mainBirthCertEl.files.length === 0) {
-       alert('กรุณาอัพโหลดใบสูติบัตรของผู้เข้าร่วมหลัก (บุตร/ธิดา)');
-       if (mainBirthCertEl) mainBirthCertEl.focus();
-       return false;
-     }
-   }
-   
-   // Validate extra visitors (name + id + religion + allergy)
+  const mainAllergy = document.getElementById('visitorAllergy');
+  if (!mainAllergy.value.trim()) { alert('กรุณาระบุการแพ้อาหาร (ถ้าไม่มีให้กรอก \"ไม่มี\")'); mainAllergy.focus(); return false; }
+  
+  // Validate extra visitors (name + id + religion + allergy)
   const n = parseInt(document.getElementById('visitorCount').value);
   for (let i = 2; i <= n; i++) {
     const nameEl = document.getElementById('extraVisitorName' + i);
@@ -584,24 +503,18 @@ function validate() {
     const allergyEl = document.getElementById('extraVisitorAllergy' + i);
     if (allergyEl && !allergyEl.value.trim()) { alert('กรุณาระบุการแพ้อาหารสำหรับผู้เข้าร่วมกิจกรรมคนที่ ' + i + ' (ถ้าไม่มีให้กรอก \"ไม่มี\")'); allergyEl.focus(); return false; }
     
-const relEl = document.getElementById('extraVisitorRelation' + i);
-     if (relEl && !relEl.value) { alert('กรุณาเลือกความสัมพันธ์ผู้ร่วมกิจกรรมคนที่ ' + i); relEl.focus(); return false; }
-     if (relEl && relEl.value === 'บุตร / ธิดา') {
-       const ageEl = document.getElementById('extraVisitorAge' + i);
-       const a = ageEl ? parseInt(ageEl.value, 10) : NaN;
-       if (!ageEl || isNaN(a) || a < 0) {
-         alert('กรุณากรอกอายุ (ปี) สำหรับผู้เข้าร่วมกิจกรรมคนที่ ' + i + ' (บุตร/ธิดา)');
-         if (ageEl) ageEl.focus();
-         return false;
-       }
-       const birthCertEl = document.getElementById('extraVisitorBirthCert' + i);
-       if (!birthCertEl || !birthCertEl.files || birthCertEl.files.length === 0) {
-         alert('กรุณาอัพโหลดใบสูติบัตร สำหรับผู้เข้าร่วมกิจกรรมคนที่ ' + i + ' (บุตร/ธิดา)');
-         if (birthCertEl) birthCertEl.focus();
-         return false;
-       }
-     }
-   }
+    const relEl = document.getElementById('extraVisitorRelation' + i);
+    if (relEl && !relEl.value) { alert('กรุณาเลือกความสัมพันธ์ผู้ร่วมกิจกรรมคนที่ ' + i); relEl.focus(); return false; }
+    if (relEl && relEl.value === 'บุตร / ธิดา') {
+      const ageEl = document.getElementById('extraVisitorAge' + i);
+      const a = ageEl ? parseInt(ageEl.value, 10) : NaN;
+      if (!ageEl || isNaN(a) || a < 0) {
+        alert('กรุณากรอกอายุ (ปี) สำหรับผู้เข้าร่วมกิจกรรมคนที่ ' + i + ' (บุตร/ธิดา)');
+        if (ageEl) ageEl.focus();
+        return false;
+      }
+    }
+  }
   if (!selectedDate) { alert('กรุณาเลือกวันที่ต้องการร่วมกิจกรรม'); return false; }
   if ((bookings[selectedDate] || 0) >= QUOTA) { alert('วันที่เลือกเต็มแล้ว กรุณาเลือกวันอื่น'); return false; }
 
@@ -628,18 +541,18 @@ const relEl = document.getElementById('extraVisitorRelation' + i);
 }
 
 // ===== GO TO CONFIRM PAGE =====
-async function goToConfirm() {
-   if (!validate()) return;
-   const n = parseInt(document.getElementById('visitorCount').value);
-   const totalPersons = n + 1;
-   const d = parseLocalDate(selectedDate);  // ✅ parse local ไม่ผ่าน UTC
-   const thDate = d.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+function goToConfirm() {
+  if (!validate()) return;
+  const n = parseInt(document.getElementById('visitorCount').value);
+  const totalPersons = n + 1;
+  const d = parseLocalDate(selectedDate);  // ✅ parse local ไม่ผ่าน UTC
+  const thDate = d.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 
-   const extras = await getExtraVisitorsAsync();
-   const visitor1Name = document.getElementById('visitorName').value.trim();
-   const visitor1Id   = document.getElementById('visitorId').value.trim();
-   const mainRelation = document.getElementById('relation').value;
-   const mainPhone    = document.getElementById('visitorPhone').value.trim();
+  const extras = getExtraVisitors();
+  const visitor1Name = document.getElementById('visitorName').value.trim();
+  const visitor1Id   = document.getElementById('visitorId').value.trim();
+  const mainRelation = document.getElementById('relation').value;
+  const mainPhone    = document.getElementById('visitorPhone').value.trim();
 
   const cost = calculateTotal();
   const c = cost;
@@ -664,8 +577,7 @@ async function goToConfirm() {
 
   const extrasListHtml = extras.length > 0 ? extras.map((v, i) => {
     const feeNote = (v.relation === 'บุตร / ธิดา' && v.age) ? ` (อายุ ${v.age} ปี)` : '';
-    const birthCertNote = (v.relation === 'บุตร / ธิดา' && v.birthCertName) ? ' ✅ อัพโหลดใบสูติบัตรแล้ว' : '';
-    return `<div style="font-size:13px;padding:2px 0;">• ${v.name} — ${v.relation}${feeNote}${birthCertNote}</div>`;
+    return `<div style="font-size:13px;padding:2px 0;">• ${v.name} — ${v.relation}${feeNote}</div>`;
   }).join('') : '<div style="font-size:13px;color:#666">ไม่มีผู้เข้าร่วมเพิ่มเติม</div>';
 
   const discountLine = cost.discountNotes.length
@@ -746,238 +658,171 @@ async function goToConfirm() {
 
 function goBack() { showPage(1); }
 
-async function uploadBirthCertViaAppsScript(base64, ref, fileName) {
-   const resp = await fetch(APPS_SCRIPT_URL, {
-     method: 'POST',
-     redirect: 'follow',
-     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-     body: JSON.stringify({ action: 'uploadBirthCert', ref: ref, fileName: fileName, base64Data: base64 })
-   });
-   if (!resp.ok) throw new Error('HTTP ' + resp.status);
-   const result = JSON.parse(await resp.text());
-   if (result.status !== 'ok') throw new Error(result.message || 'Upload failed');
-   return result.url;
+// ===== SUBMIT =====
+async function submitBooking() {
+  const ref = 'VIS-' + Math.floor(10000 + Math.random() * 90000);
+  const n = parseInt(document.getElementById('visitorCount').value);
+  const totalPersons = n + 1;
+  const d = parseLocalDate(selectedDate);  // ✅ parse local ไม่ผ่าน UTC
+  const thDate = d.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  const now = new Date().toLocaleString('th-TH');
+
+  const extras = getExtraVisitors();
+  const extraNamesStr = extras.map(v => v.name + '|' + v.id + '|' + v.relation + '|' + (v.age || '')).join(';;');
+  const extraReligionsStr = extras.map(v => v.religion || '').join(';;');
+  const extraAllergiesStr = extras.map(v => v.allergy || '').join(';;');
+
+  const prisonerId = document.getElementById('prisonerId').value.trim();
+
+// ── ตรวจสอบเลขผู้ต้องขังซ้ำในวันเดียวกัน ──
+   document.getElementById('overlay').classList.add('show');
+   document.getElementById('submitBtn').disabled = true;
+   try {
+     const rows = await fetchAllReservations();
+     if (rows) {
+       const activeStatuses = ['รอตรวจสอบวินัย', 'รอตรวจสอบผู้เข้าร่วม', 'รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น'];
+       const duplicate = rows.find(r =>
+         String(r.prisonerId || '').trim() === prisonerId &&
+         (r.visitDateISO || '') === selectedDate &&
+         activeStatuses.includes(r.status)
+       );
+      if (duplicate) {
+        document.getElementById('overlay').classList.remove('show');
+        document.getElementById('submitBtn').disabled = false;
+        alert(`⚠️ ไม่สามารถจองได้\n\nมีการจองผู้ต้องขังหมายเลข "${prisonerId}" ในวันนี้อยู่แล้ว\n\nRef: ${duplicate.ref}\nสถานะ: ${duplicate.status}\n\nกรุณาเลือกวันอื่น หรือตรวจสอบสถานะการจองเดิม`);
+        return;
+      }
+    }
+  } catch(err) {
+    console.warn('Duplicate check skipped:', err);
   }
 
-async function submitBooking() {
-     const ref = 'VIS-' + Math.floor(10000 + Math.random() * 90000);
-     const n = parseInt(document.getElementById('visitorCount').value);
-     const totalPersons = n + 1;
-     const d = parseLocalDate(selectedDate);
-     const thDate = d.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-     const now = new Date().toLocaleString('th-TH');
+  const cost = calculateTotal();
+  const data = {
+    ref,
+    timestamp: now,
+    visitorName: document.getElementById('visitorName').value.trim(),
+    extraVisitorNames: extraNamesStr,
+    visitorId: document.getElementById('visitorId').value.trim(),
+    visitorPhone: document.getElementById('visitorPhone').value.trim(),
+    relation: document.getElementById('relation').value,
+    religion: document.getElementById('visitorReligion').value.trim(),
+    allergy: document.getElementById('visitorAllergy').value.trim(),
+    extraVisitorReligions: extraReligionsStr,
+    extraVisitorAllergies: extraAllergiesStr,
+    prisonerName: document.getElementById('prisonerName').value.trim(),
+    prisonerId: document.getElementById('prisonerId').value.trim(),
+    wing: document.getElementById('wing').value,
+    visitDate: thDate,
+    visitDateISO: selectedDate,
+    visitorCount: n,
+    totalPersons,
+    total: cost.total,
+    adultCount: cost.adults,
+    child5to8Count: cost.kids5_8,
+    childUnder5Count: cost.kidsUnder5,
+    status: 'รอตรวจสอบวินัย',
+    slipImage: ''
+  };
 
-     const extras = await getExtraVisitorsAsync();
-     const extraNamesStr = extras.map(v => v.name + '|' + v.id + '|' + v.relation + '|' + (v.age || '') + '|' + (v.birthCertName || '')).join(';;');
-     const extraReligionsStr = extras.map(v => v.religion || '').join(';;');
-     const extraAllergiesStr = extras.map(v => v.allergy || '').join(';;');
+  // overlay already shown from duplicate check; do NOT add again
+  let submitSuccess = false;
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(data)
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const result = JSON.parse(await resp.text());
+    if (result.status !== 'ok') throw new Error(result.message || 'ไม่สำเร็จ');
+    submitSuccess = true;
+  } catch (err) {
+    const isDemoMode = APPS_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
+    if (isDemoMode) {
+      console.warn('Demo mode — Apps Script URL not configured (fake success for demo)');
+      submitSuccess = true;
+    } else {
+      console.error('Submit error:', err);
+      submitSuccess = false;
+    }
+  } finally {
+    document.getElementById('overlay').classList.remove('show');
+  }
 
-     const mainBirthCertEl = document.getElementById('mainVisitorBirthCert');
-     const mainBirthCertFile = mainBirthCertEl && mainBirthCertEl.files && mainBirthCertEl.files[0] ? mainBirthCertEl.files[0] : null;
-     let mainBirthCertBase64 = null;
-     let mainBirthCertName = '';
-     if (mainBirthCertFile) {
-       mainBirthCertBase64 = await readFileAsBase64(mainBirthCertFile);
-       mainBirthCertName = mainBirthCertFile.name;
-     }
+  if (!submitSuccess) {
+    document.getElementById('submitBtn').disabled = false;
+    alert('❌ การส่งคำขอจองล้มเหลว\n\nกรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต แล้วลองใหม่อีกครั้ง\nหรือติดต่อเจ้าหน้าที่หากปัญหายังคงอยู่');
+    return;
+  }
 
-     const cost = calculateTotal();
-     const data = {
-       ref,
-       timestamp: now,
-       visitorName: document.getElementById('visitorName').value.trim(),
-       visitorId: document.getElementById('visitorId').value.trim(),
-       visitorPhone: document.getElementById('visitorPhone').value.trim(),
-       relation: document.getElementById('relation').value,
-       religion: document.getElementById('visitorReligion').value.trim(),
-       allergy: document.getElementById('visitorAllergy').value.trim(),
-       extraVisitorReligions: extraReligionsStr,
-       extraVisitorAllergies: extraAllergiesStr,
-       extraVisitorNames: extraNamesStr,
-       prisonerName: document.getElementById('prisonerName').value.trim(),
-       prisonerId: document.getElementById('prisonerId').value.trim(),
-       wing: document.getElementById('wing').value,
-       visitDate: thDate,
-       visitDateISO: selectedDate,
-       visitorCount: n,
-       totalPersons,
-       total: cost.total,
-       adultCount: cost.adults,
-       child5to8Count: cost.kids5_8,
-       childUnder5Count: cost.kidsUnder5,
-       status: 'รอตรวจสอบวินัย',
-       slipImage: ''
-     };
+  // ✅ Success path (real save or demo)
+  document.getElementById('refNumber').textContent = ref;
 
-// Show overlay
-   document.getElementById('overlay').classList.add('show');
-   let submitSuccess = false;
-   try {
-     const resp = await fetch(APPS_SCRIPT_URL, {
-       method: 'POST',
-       redirect: 'follow',
-       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-       body: JSON.stringify(data)
-     });
-     if (!resp.ok) throw new Error('HTTP ' + resp.status);
-     const result = JSON.parse(await resp.text());
-     if (result.status !== 'ok') throw new Error(result.message || 'ไม่สำเร็จ');
-     submitSuccess = true;
-   } catch (err) {
-     const isDemoMode = APPS_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
-     if (isDemoMode) {
-       console.warn('Demo mode — Apps Script URL not configured (fake success for demo)');
-       submitSuccess = true;
-     } else {
-       console.error('Submit error:', err);
-       submitSuccess = false;
-     }
-   } finally {
-     document.getElementById('overlay').classList.remove('show');
-   }
+  // Optimistic update local quota (counts pending bookings too)
+  bookings[selectedDate] = (bookings[selectedDate] || 0) + 1;
+  renderCalendar();
 
-   if (!submitSuccess) {
-     document.getElementById('submitBtn').disabled = false;
-     alert('❌ การส่งคำขอจองล้มเหลว\n\nกรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต แล้วลองใหม่อีกครั้ง\nหรือติดต่อเจ้าหน้าที่หากปัญหายังคงอยู่');
-     return;
-   }
+  const costFinal = calculateTotal();
+  const cf = costFinal;
 
-   // Upload birth certificates to Drive AFTER booking is saved
-   let birthCertUrls = [];
-   const birthCertFilesToUpload = [];
-   if (mainBirthCertBase64 && mainBirthCertFile) {
-     birthCertFilesToUpload.push({ base64: mainBirthCertBase64, fileName: mainBirthCertName });
-   }
-   extras.forEach(v => {
-     if (v.birthCertBase64 && v.birthCertName) {
-       birthCertFilesToUpload.push({ base64: v.birthCertBase64, fileName: v.birthCertName });
-     }
-   });
+  document.getElementById('finalSummary').innerHTML = `
+    <div style="text-align:center;margin-bottom:8px">
+      <strong style="color:#185fa5">✅ ส่งคำขอเรียบร้อย — Ref: ${ref}</strong>
+    </div>
+    
+    <div class="booking-details">
+      <div class="detail-row">
+        <span class="detail-label">📅 วันที่เข้าร่วม</span>
+        <span class="detail-value">${data.visitDate}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">👥 จำนวนผู้เข้าร่วม</span>
+        <span class="detail-value">ญาติ ${data.visitorCount} คน + ผู้ต้องขัง 1 คน = ${totalPersons} คน</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">👤 ชื่อผู้ต้องขัง</span>
+        <span class="detail-value">${data.prisonerName}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">🔢 เลขประจำตัวผู้ต้องขัง</span>
+        <span class="detail-value">${data.prisonerId}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">📍 แดนของผู้ต้องขัง</span>
+        <span class="detail-value">${data.wing}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">🧑 ชื่อผู้จอง</span>
+        <span class="detail-value">${data.visitorName}</span>
+      </div>
+      ${extras.length > 0 ? `<div class="detail-row">
+        <span class="detail-label">📋 รายชื่อผู้เข้าร่วมเพิ่มเติม</span>
+        <span class="detail-value" style="line-height:1.8">${extras.map((v, i) => `${i + 2}. ${v.name} (${v.relation})`).join('<br>')}</span>
+      </div>` : ''}
+    </div>
+    
+    <div style="font-size:11px;color:#888;text-align:center;margin-top:12px">ใช้ปุ่ม "ตรวจสอบสถานะ" เพื่อติดตาม หรือคัดลอก Ref ด้านบน</div>
+  `;
 
-   for (const file of birthCertFilesToUpload) {
-     try {
-       const url = await uploadBirthCertViaAppsScript(file.base64, ref, file.fileName);
-       birthCertUrls.push(url);
-     } catch (e) {
-       console.error('Birth cert upload failed:', e);
-     }
-   }
+  // Store ref in sessionStorage for status page
+  try {
+    sessionStorage.setItem('lastRef', ref);
+    sessionStorage.setItem('lastPrisonerId', data.prisonerId);
+  } catch(e) {}
 
-   // ✅ Success path (real save or demo)
-   document.getElementById('refNumber').textContent = ref;
-
-   // Optimistic update local quota (counts pending bookings too)
-   bookings[selectedDate] = (bookings[selectedDate] || 0) + 1;
-   renderCalendar();
-
-   const costFinal = calculateTotal();
-   const cf = costFinal;
-
-   document.getElementById('finalSummary').innerHTML = `
-     <div style="text-align:center;margin-bottom:8px">
-       <strong style="color:#185fa5">✅ ส่งคำขอเรียบร้อย — Ref: ${ref}</strong>
-     </div>
-     
-     <div class="booking-details">
-       <div class="detail-row">
-         <span class="detail-label">📅 วันที่เข้าร่วม</span>
-         <span class="detail-value">${data.visitDate}</span>
-       </div>
-       <div class="detail-row">
-         <span class="detail-label">👥 จำนวนผู้เข้าร่วม</span>
-         <span class="detail-value">ญาติ ${data.visitorCount} คน + ผู้ต้องขัง 1 คน = ${totalPersons} คน</span>
-       </div>
-       <div class="detail-row">
-         <span class="detail-label">👤 ชื่อผู้ต้องขัง</span>
-         <span class="detail-value">${data.prisonerName}</span>
-       </div>
-       <div class="detail-row">
-         <span class="detail-label">🔢 เลขประจำตัวผู้ต้องขัง</span>
-         <span class="detail-value">${data.prisonerId}</span>
-       </div>
-       <div class="detail-row">
-         <span class="detail-label">📍 แดนของผู้ต้องขัง</span>
-         <span class="detail-value">${data.wing}</span>
-       </div>
-       <div class="detail-row">
-         <span class="detail-label">🧑 ชื่อผู้จอง</span>
-         <span class="detail-value">${data.visitorName}</span>
-       </div>
-       ${extras.length > 0 ? `<div class="detail-row">
-            <span class="detail-label">📋 รายชื่อผู้เข้าร่วมเพิ่มเติม</span>
-            <span class="detail-value" style="line-height:1.8">${extras.map((v, i) => {
-              let note = `${i + 2}. ${v.name} (${v.relation})`;
-              if (v.relation === 'บุตร / ธิดา' && v.birthCertName) {
-                note += '<br><span style="font-size:11px;color:var(--green)">✓ อัพโหลดใบสูติบัตรแล้ว</span>';
-              }
-              return note;
-            }).join('<br>')}</span>
-          </div>` : ''}
-        </div>
-        
-       ${birthCertUrls.length > 0 ? `<div class="detail-row">
-           <span class="detail-label">📎 ไฟล์ใบสูติบัตร</span>
-           <span class="detail-value"><button class="btn-secondary" style="font-size:12px;padding:6px 12px" onclick="showBirthCertPreviews()">ดูใบสูติบัตร (${birthCertUrls.length} ไฟล์)</button></span>
-         </div>` : ''}
-        
-        <div style="font-size:11px;color:#888;text-align:center;margin-top:12px">ใช้ปุ่ม "ตรวจสอบสถานะ" เพื่อติดตาม หรือคัดลอก Ref ด้านบน</div>
-     `;
-       
-     window.birthCertPreviews = birthCertUrls;
-     sessionStorage.setItem('birthCertFiles', JSON.stringify([mainBirthCertName, ...extras.map(v => v.birthCertName)].filter(Boolean)));
-
-   // Store ref in sessionStorage for status page
-   try {
-     sessionStorage.setItem('lastRef', ref);
-     sessionStorage.setItem('lastPrisonerId', data.prisonerId);
-   } catch(e) {}
-
-showPage(3);
- }
+  showPage(3);
+}
 
 function copyRef() {
-   const ref = document.getElementById('refNumber').textContent;
-   navigator.clipboard.writeText(ref).then(() => {
-     const btn = document.getElementById('copyRefBtn');
-     btn.innerHTML = '<i class="ti ti-check"></i> คัดลอกแล้ว';
-     setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy"></i> คัดลอก Ref'; }, 2000);
-   }).catch(() => {});
- }
-
-function showBirthCertPreviews() {
-   const previews = window.birthCertPreviews || [];
-   const names = JSON.parse(sessionStorage.getItem('birthCertFiles') || '[]');
-  if (!previews.length) return;
-     
-    // สร้าง modal สำหรับแสดง preview
-    const modal = document.createElement('div');
-    modal.id = 'birthCertModal';
-    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000;';
-    modal.innerHTML = `
-      <div style="background:white;border-radius:12px;padding:20px;max-width:90%;max-height:90%;overflow:auto;">
-        <h3 style="margin-top:0;margin-bottom:12px">ใบสูติบัตรที่อัพโหลด</h3>
-        <div id="birthCertGallery" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;"></div>
-        <button onclick="document.getElementById('birthCertModal').remove()" style="margin-top:16px;padding:8px 16px;background:#0B2545;color:white;border:none;border-radius:6px;cursor:pointer;">ปิด</button>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    
-    // แสดงรูปภาพจาก URL หรือ base64
-    const gallery = modal.querySelector('#birthCertGallery');
-   previews.forEach((url, i) => {
-      if (url) {
-        const isDriveUrl = url.includes('drive.google.com') || url.includes('drive.usercontent.google.com');
-        const displayUrl = isDriveUrl ? url : url; // URL is already thumbnail format from server
-        const div = document.createElement('div');
-        div.style.cssText = 'border:1px solid #ddd;border-radius:8px;padding:8px;text-align:center;';
-        div.innerHTML = `
-          <img src="${displayUrl}" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:4px;cursor:pointer;" onclick="window.open('${url}','_blank')">
-          <div style="font-size:11px;margin-top:4px;word-break:break-all;">${names[i] || 'ไฟล์ ' + (i+1)}</div>
-        `;
-        gallery.appendChild(div);
-      }
-    });
-  }
+  const ref = document.getElementById('refNumber').textContent;
+  navigator.clipboard.writeText(ref).then(() => {
+    const btn = document.getElementById('copyRefBtn');
+    btn.innerHTML = '<i class="ti ti-check"></i> คัดลอกแล้ว';
+    setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy"></i> คัดลอก Ref'; }, 2000);
+  }).catch(() => {});
+}
 
 function showPage(n) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));

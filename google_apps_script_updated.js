@@ -393,8 +393,8 @@ logEvent(username, 'create_role', roleName, { permissions: permissionsInput });
     return jsonResp({ status: 'ok', ref: body.ref });
   }
 
-// ===== Public actions (no login required) =====
-  const publicActions = ['uploadSlip', 'uploadBirthCert', 'updateSlipAndStatus'];
+  // ===== Public actions (no login required) =====
+ const publicActions = ['uploadSlip', 'updateSlipAndStatus'];
  if (publicActions.includes(action) && (username === 'public' || !username)) {
    // allow public slip upload / payment confirmation
  } else if (!publicActions.includes(action) && !isAuthorized(username, pass)) {
@@ -532,59 +532,30 @@ logEvent(username, 'create_role', roleName, { permissions: permissionsInput });
     }
   }
 
-// ── UPDATE SLIP + STATUS ──
-   if (action === 'updateSlipAndStatus') {
-     const sheet = getMainSheet();
-     const data  = sheet.getDataRange().getValues();
-     const headers    = data[0];
-     const refIdx     = headers.indexOf('ref');
-     const statusIdx  = headers.indexOf('status');
-     const slipIdx    = headers.indexOf('slipImage');
-     for (let i = 1; i < data.length; i++) {
-       if (data[i][refIdx] === body.ref) {
-         sheet.getRange(i + 1, statusIdx + 1).setValue(body.status || 'ชำระแล้ว');
-         if (slipIdx >= 0 && body.slipImage) {
-           let slipVal = body.slipImage;
-           if (slipVal.startsWith('data:image')) {
-             try { slipVal = saveSlipToDrive(body.ref, slipVal); } catch(e) { slipVal = 'SLIP_UPLOADED:' + new Date().toISOString(); }
-           }
-           sheet.getRange(i + 1, slipIdx + 1).setValue(slipVal);
-         }
-         logEvent(username, 'slip_and_status_updated', body.ref, { status: body.status }, 'success');
-         return jsonResp({ status: 'ok' });
-       }
-     }
-     return jsonResp({ status: 'error', message: 'Ref not found' });
-   }
-
-   // ── UPLOAD BIRTH CERT (public) ──
-   if (action === 'uploadBirthCert') {
-     if (!body.base64Data) return jsonResp({ status: 'error', message: 'Missing base64Data' });
-     if (!body.ref) return jsonResp({ status: 'error', message: 'Missing ref' });
-     try {
-       const url = saveBirthCertToDrive(body.ref, body.base64Data, body.fileName || '');
-       const sheet = getMainSheet();
-       const data = sheet.getDataRange().getValues();
-       const refIdx = data[0].indexOf('ref');
-       const bcIdx = data[0].indexOf('birthCertFiles');
-       if (refIdx >= 0 && bcIdx >= 0) {
-         for (let i = 1; i < data.length; i++) {
-           if (String(data[i][refIdx]).trim() === String(body.ref).trim()) {
-             const existing = String(data[i][bcIdx] || '');
-             const newVal = existing ? existing + ';;' + url : url;
-             sheet.getRange(i + 1, bcIdx + 1).setValue(newVal);
-             break;
-           }
-         }
-       }
-       logEvent(username || 'public', 'birth_cert_uploaded', body.ref, {}, 'success');
-       return jsonResp({ status: 'ok', url: url });
-     } catch(e) {
-       Logger.log('uploadBirthCert error: ' + e.toString());
-       logEvent(username || 'public', 'birth_cert_upload_failed', body.ref, { error: e.toString() }, 'error');
-       return jsonResp({ status: 'error', message: e.toString() });
-     }
-   }
+  // ── UPDATE SLIP + STATUS ──
+  if (action === 'updateSlipAndStatus') {
+    const sheet = getMainSheet();
+    const data  = sheet.getDataRange().getValues();
+    const headers    = data[0];
+    const refIdx     = headers.indexOf('ref');
+    const statusIdx  = headers.indexOf('status');
+    const slipIdx    = headers.indexOf('slipImage');
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][refIdx] === body.ref) {
+        sheet.getRange(i + 1, statusIdx + 1).setValue(body.status || 'ชำระแล้ว');
+        if (slipIdx >= 0 && body.slipImage) {
+          let slipVal = body.slipImage;
+          if (slipVal.startsWith('data:image')) {
+            try { slipVal = saveSlipToDrive(body.ref, slipVal); } catch(e) { slipVal = 'SLIP_UPLOADED:' + new Date().toISOString(); }
+          }
+          sheet.getRange(i + 1, slipIdx + 1).setValue(slipVal);
+        }
+        logEvent(username, 'slip_and_status_updated', body.ref, { status: body.status }, 'success');
+        return jsonResp({ status: 'ok' });
+      }
+    }
+    return jsonResp({ status: 'error', message: 'Ref not found' });
+  }
 
   return jsonResp({ status: 'error', message: 'Unknown action' });
 }
@@ -671,8 +642,7 @@ function ensureHeaders(sheet) {
     'religion','allergy','extraVisitorReligions','extraVisitorAllergies',
     'extraVisitorNames','visitorApproved','extraVisitorApproved',
     'prisonerName','prisonerId','wing','visitDate','visitDateISO',
-    'visitorCount','totalPersons','total','adultCount','child5to8Count','childUnder5Count',
-    'status','slipImage','birthCertFiles','birthCertFilesBase64'
+    'visitorCount','totalPersons','total','adultCount','child5to8Count','childUnder5Count','status','slipImage'
   ];
   sheet.appendRow(headers);
   const headerRange = sheet.getRange(1, 1, 1, headers.length);
@@ -681,9 +651,7 @@ function ensureHeaders(sheet) {
   headerRange.setFontColor('#ffffff');
   sheet.setFrozenRows(1);
   const slipCol = headers.indexOf('slipImage') + 1;
-  const bcCol = headers.indexOf('birthCertFiles') + 1;
   if (slipCol > 0) sheet.hideColumns(slipCol);
-  if (bcCol > 0) sheet.hideColumns(bcCol);
 }
 
 // ===== SLIP TO DRIVE =====
@@ -718,74 +686,6 @@ function saveSlipToDrive(ref, base64Data, mimeTypeOverride, fileNameOverride) {
   const fileId = file.getId();
   return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w1200';
 }
-
-// ===== BIRTH CERT TO DRIVE =====
-function saveBirthCertToDrive(ref, base64Data, fileName) {
-  const matches = base64Data.match(/^data:([a-zA-Z0-9+\/]+\/[a-zA-Z0-9+\/]+);base64,(.+)$/);
-  let mimeType, rawBase64;
-  if (matches) {
-    mimeType = matches[1];
-    rawBase64 = matches[2];
-  } else {
-    throw new Error('Invalid base64 format');
-  }
-
-  const ext = mimeType.split('/')[1].replace('jpeg','jpg').replace('jpg','jpg');
-  const finalFileName = fileName || ('birthcert_' + ref + '_' + new Date().getTime() + '.' + ext);
-  let blob;
-  try {
-    blob = Utilities.newBlob(Utilities.base64Decode(rawBase64), mimeType, finalFileName);
-  } catch(decodeErr) {
-    throw new Error('base64 decode failed: ' + decodeErr.message);
-  }
-
-  const folderName = 'BirthCertificates';
-  const folderIter = DriveApp.getFoldersByName(folderName);
-  const folder = folderIter.hasNext() ? folderIter.next() : DriveApp.createFolder(folderName);
-
-  const file = folder.createFile(blob);
-  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-  const fileId = file.getId();
-  return 'https://drive.google.com/thumbnail?id=' + fileId + '&sz=w1200';
-}
-
-function uploadBirthCertFiles(ref, base64Data, fileNames) {
-   const base64Array = base64Data.split('~|~');
-   const nameArray = fileNames.split(';');
-   const urls = [];
-
-   for (let i = 0; i < base64Array.length; i++) {
-     const b64 = base64Array[i];
-     if (!b64 || !b64.trim()) continue;
-     
-     try {
-       const url = saveBirthCertToDrive(ref, b64, nameArray[i]);
-       urls.push(url);
-     } catch(e) {
-       Logger.log('Birth cert upload error for file ' + i + ': ' + e.toString());
-     }
-   }
-
-   // Update sheet with Drive URLs
-   const sheet = getMainSheet();
-   const data = sheet.getDataRange().getValues();
-   const refIdx = data[0].indexOf('ref');
-   const bcUrlIdx = data[0].indexOf('birthCertFiles');
-   const bcBase64Idx = data[0].indexOf('birthCertFilesBase64');
-
-   for (let i = 1; i < data.length; i++) {
-     if (String(data[i][refIdx]).trim() === String(ref).trim()) {
-       if (bcUrlIdx >= 0) {
-         sheet.getRange(i + 1, bcUrlIdx + 1).setValue(urls.join(';;'));
-       }
-       // Clear base64 from sheet after successful upload
-       if (bcBase64Idx >= 0) {
-         sheet.getRange(i + 1, bcBase64Idx + 1).setValue('');
-       }
-       break;
-     }
-   }
- }
 
 // ===== PRISONER MASTER DATABASE =====
 function getPrisonerSheet() {
