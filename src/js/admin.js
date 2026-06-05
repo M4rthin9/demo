@@ -3342,21 +3342,26 @@ async function saveNewVisitor() {
     return;
   }
 
+  const editIdx = document.getElementById('addVisitorModalBg').dataset.editIdx;
+  const isEdit = !!editIdx;
+  const actionType = isEdit ? 'updateVisitor' : 'createVisitor';
+  const oldIdCard = isEdit ? (allVisitors[editIdx]?.idCard || '') : null;
+
   try {
     const resp = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       redirect: 'follow',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'createVisitor', username: currentUser.username, password: currentUser.password, name, idCard, phone, email, relation })
+      body: JSON.stringify({ action: actionType, username: currentUser.username, password: currentUser.password, name, idCard, phone, email, relation, oldIdCard })
     });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
-    if (data.status !== 'ok') throw new Error(data.message || 'สร้างผู้เยี่ยมไม่สำเร็จ');
+    if (data.status !== 'ok') throw new Error(data.message || 'บันทึกผู้เยี่ยมไม่สำเร็จ');
 
     closeAddVisitorModal();
-    logEvent('create_visitor', `สร้างผู้เยี่ยมใหม่: ${name}`);
+    logEvent(isEdit ? 'update_visitor' : 'create_visitor', `${isEdit ? 'แก้ไข' : 'สร้าง'}ผู้เยี่ยม: ${name}`);
     loadVisitors();
-    alert('สร้างผู้เยี่ยมสำเร็จ');
+    alert(`${isEdit ? 'แก้ไข' : 'สร้าง'}ผู้เยี่ยมสำเร็จ`);
   } catch(e) {
     document.getElementById('addVisitorError').textContent = e.message || 'เกิดข้อผิดพลาด';
     document.getElementById('addVisitorError').style.display = 'block';
