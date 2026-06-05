@@ -4,27 +4,27 @@ const QUOTA = 20;
 
 // ===== CALENDAR =====
 const HOLIDAYS = {
-  '2026-01-01':'วันขึ้นปีใหม่','2026-02-13':'มาฆบูชา','2026-04-06':'จักรี',
-  '2026-04-13':'สงกรานต์','2026-04-14':'สงกรานต์','2026-04-15':'สงกรานต์',
-  '2026-05-01':'แรงงาน','2026-05-04':'ฉัตรมงคล','2026-05-11':'วิสาขบูชา',
-  '2026-06-03':'วันพระราชินี','2026-07-10':'อาสาฬหบูชา','2026-07-28':'วันเฉลิม ร.10',
-  '2026-08-12':'วันแม่','2026-10-13':'วันสวรรคต ร.9','2026-10-23':'จุฬาลงกรณ์',
-  '2026-12-05':'วันพ่อ','2026-12-10':'รัฐธรรมนูญ','2026-12-31':'วันสิ้นปี',
-  '2026-05-25':'ปิดจอง',   // ตามคำขอ: ปิดจองวันที่ 25-5-69
-  '2026-06-01':'หยุดชดเชย',
+  '2026-01-01': 'วันขึ้นปีใหม่', '2026-02-13': 'มาฆบูชา', '2026-04-06': 'จักรี',
+  '2026-04-13': 'สงกรานต์', '2026-04-14': 'สงกรานต์', '2026-04-15': 'สงกรานต์',
+  '2026-05-01': 'แรงงาน', '2026-05-04': 'ฉัตรมงคล', '2026-05-11': 'วิสาขบูชา',
+  '2026-06-03': 'วันพระราชินี', '2026-07-10': 'อาสาฬหบูชา', '2026-07-28': 'วันเฉลิม ร.10',
+  '2026-08-12': 'วันแม่', '2026-10-13': 'วันสวรรคต ร.9', '2026-10-23': 'จุฬาลงกรณ์',
+  '2026-12-05': 'วันพ่อ', '2026-12-10': 'รัฐธรรมนูญ', '2026-12-31': 'วันสิ้นปี',
+  '2026-05-25': 'ปิดจอง',   // ตามคำขอ: ปิดจองวันที่ 25-5-69
+  '2026-06-01': 'หยุดชดเชย',
 };
 
 let calYear, calMonth, selectedDate = null;
 let bookings = {}; // will be loaded from server; no hardcoded demo
 
 const today = new Date(); // use real current date (dynamic)
-calYear  = today.getFullYear();
+calYear = today.getFullYear();
 calMonth = today.getMonth();
 
 function changeMonth(d) {
   calMonth += d;
   if (calMonth > 11) { calMonth = 0; calYear++; }
-  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  if (calMonth < 0) { calMonth = 11; calYear--; }
   renderCalendar();
 }
 
@@ -63,7 +63,7 @@ function renderCalendar() {
   const firstDay = new Date(calYear, calMonth, 1).getDay();
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
   for (let i = 0; i < firstDay; i++) grid.insertAdjacentHTML('beforeend', '<div></div>');
-  
+
   const todayStr = toLocalDateStr(today);
 
   // ──คำนวณช่วงวันที่อนุญาตให้จอง (พรุ่งนี้ ถึง 14 วันล่วงหน้า) ──
@@ -77,31 +77,31 @@ function renderCalendar() {
 
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(calYear, calMonth, d);
-    const dateStr = toLocalDateStr(date);  
+    const dateStr = toLocalDateStr(date);
     const dow = date.getDay();
-    
+
     const isPast = dateStr < todayStr;
     const isWknd = dow === 0 || dow === 6;
-    const isHol  = HOLIDAYS[dateStr];
-    const quota  = bookings[dateStr] || 0;
+    const isHol = HOLIDAYS[dateStr];
+    const quota = bookings[dateStr] || 0;
     const isFull = quota >= QUOTA;
-    const isSel  = selectedDate === dateStr;
-    
+    const isSel = selectedDate === dateStr;
+
     // ── ตรวจสอบเงื่อนไข: ถ้านอกเหนือจากช่วงที่อนุญาต ให้ถือว่าจองไม่ได้ ──
     const isNotWithinWindow = dateStr < minAllowedStr || dateStr > maxAllowedStr;
 
     let cls = 'day-btn';
     // วันที่ผ่านมาแล้ว หรือวันไม่อยู่ในช่วงที่อนุญาต จะแสดงเป็นสีเทาจาง (.past)
-    if (isPast || isNotWithinWindow) cls += ' past'; 
+    if (isPast || isNotWithinWindow) cls += ' past';
     else if (isHol) cls += ' holiday';
     else if (isWknd) cls += ' weekend';
     else if (isFull) cls += ' full-day';
-    
+
     if (isSel) cls += ' selected';
-    
+
     const holLabel = isHol ? `<span class="hol-label">${HOLIDAYS[dateStr]}</span>` : '';
     const quotaLabel = (!isPast && !isNotWithinWindow && !isHol && !isWknd) ? `<span class="quota">${quota}/${QUOTA}</span>` : '';
-    
+
     // กำหนดให้บล็อกการกด ถ้าเกิดเงื่อนไขอย่างใดอย่างหนึ่ง
     const isBlocked = isPast || isNotWithinWindow || isHol || isWknd || isFull;
 
@@ -114,9 +114,9 @@ function renderCalendar() {
 function selectDate(dateStr, blocked) {
   if (blocked) return; // คลิกไม่ได้ถ้าโดนบล็อก
   selectedDate = dateStr;
-  const d = parseLocalDate(dateStr);  
+  const d = parseLocalDate(dateStr);
   document.getElementById('selectedDateDisplay').textContent =
-    '✓ เลือก: ' + d.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    '✓ เลือก: ' + d.toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   renderCalendar();
 }
 
@@ -137,16 +137,16 @@ function updateExtraVisitors() {
     div.innerHTML =
       '<div style="font-size:12px;font-weight:600;color:var(--blue);margin-bottom:8px;">ผู้เข้าร่วมกิจกรรม ' + i + '</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">' +
-        '<div class="form-group"><label>ชื่อ-นามสกุล <span style=\"color:var(--red)\">*</span></label>' +
-        '<input type="text" id="extraVisitorName' + i + '" placeholder="เช่น สมหญิง ใจดี"></div>' +
-        '<div class="form-group"><label>เลขบัตรประชาชน <span style=\"color:var(--red)\">*</span></label>' +
-        '<input type="text" id="extraVisitorId' + i + '" placeholder="X-XXXX-XXXXX-XX-X" maxlength="17"></div>' +
+      '<div class="form-group"><label>ชื่อ-นามสกุล <span style=\"color:var(--red)\">*</span></label>' +
+      '<input type="text" id="extraVisitorName' + i + '" placeholder="เช่น สมหญิง ใจดี"></div>' +
+      '<div class="form-group"><label>เลขบัตรประชาชน <span style=\"color:var(--red)\">*</span></label>' +
+      '<input type="text" id="extraVisitorId' + i + '" placeholder="X-XXXX-XXXXX-XX-X" maxlength="17"></div>' +
       '</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">' +
-        '<div class="form-group"><label>ศาสนา <span style=\"color:var(--red)\">*</span></label>' +
-        '<select id="extraVisitorReligion' + i + '">' + religionOpts + '</select></div>' +
-        '<div class="form-group"><label>การแพ้อาหาร <span style=\"color:var(--red)\">*</span></label>' +
-        '<input type="text" id="extraVisitorAllergy' + i + '" placeholder="ระบุอาการแพ้ หรือ \'ไม่มี\'"></div>' +
+      '<div class="form-group"><label>ศาสนา <span style=\"color:var(--red)\">*</span></label>' +
+      '<select id="extraVisitorReligion' + i + '">' + religionOpts + '</select></div>' +
+      '<div class="form-group"><label>การแพ้อาหาร <span style=\"color:var(--red)\">*</span></label>' +
+      '<input type="text" id="extraVisitorAllergy' + i + '" placeholder="ระบุอาการแพ้ หรือ \'ไม่มี\'"></div>' +
       '</div>' +
       '<div class="form-group"><label>ความสัมพันธ์ <span style=\"color:var(--red)\">*</span></label>' +
       '<select id="extraVisitorRelation' + i + '">' + relOpts + '</select></div>' +
@@ -158,7 +158,7 @@ function updateExtraVisitors() {
     // attach conditional age field for บุตร/ธิดา
     const relEl = div.querySelector('#extraVisitorRelation' + i);
     if (relEl) {
-      relEl.onchange = function() {
+      relEl.onchange = function () {
         const ag = document.getElementById('ageGroup' + i);
         const ai = document.getElementById('extraVisitorAge' + i);
         if (!ag) return;
@@ -178,11 +178,11 @@ function getExtraVisitors() {
   const extras = [];
   for (let i = 2; i <= n; i++) {
     const nameEl = document.getElementById('extraVisitorName' + i);
-    const idEl   = document.getElementById('extraVisitorId' + i);
-    const relEl  = document.getElementById('extraVisitorRelation' + i);
-    const ageEl  = document.getElementById('extraVisitorAge' + i);
+    const idEl = document.getElementById('extraVisitorId' + i);
+    const relEl = document.getElementById('extraVisitorRelation' + i);
+    const ageEl = document.getElementById('extraVisitorAge' + i);
     const religionEl = document.getElementById('extraVisitorReligion' + i);
-    const allergyEl  = document.getElementById('extraVisitorAllergy' + i);
+    const allergyEl = document.getElementById('extraVisitorAllergy' + i);
     if (nameEl) extras.push({
       name: nameEl.value.trim(),
       id: idEl ? idEl.value.trim() : '',
@@ -231,7 +231,7 @@ function copyDeptReport(dept) {
   const n = parseInt(document.getElementById('visitorCount').value);
   const totalPersons = n + 1;
   const d = parseLocalDate(selectedDate);
-  const thDate = d.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  const thDate = d.toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   const visitor1Name = document.getElementById('visitorName').value.trim();
   const mainPhone = document.getElementById('visitorPhone').value.trim();
@@ -247,42 +247,42 @@ function copyDeptReport(dept) {
 
   if (dept === 'booking') {
     text = `รายงานการจอง\n` +
-           `วันที่: ${thDate}\n` +
-           `ผู้จอง: ${visitor1Name} (${mainPhone})\n` +
-           `ความสัมพันธ์: ${mainRelation}\n` +
-           `ผู้ต้องขัง: ${prisonerName} (#${prisonerId}) - ${wing}\n` +
-           `จำนวน: ญาติ ${n} คน + ผู้ต้องขัง 1 = ${totalPersons} คน\n` +
-           `ค่าบริการ: ${cost.total.toLocaleString()} บาท\n` +
-           (cost.discountNotes.length ? `ส่วนลดบุตร/ธิดา: ${cost.discountNotes.join(', ')}\n` : '');
+      `วันที่: ${thDate}\n` +
+      `ผู้จอง: ${visitor1Name} (${mainPhone})\n` +
+      `ความสัมพันธ์: ${mainRelation}\n` +
+      `ผู้ต้องขัง: ${prisonerName} (#${prisonerId}) - ${wing}\n` +
+      `จำนวน: ญาติ ${n} คน + ผู้ต้องขัง 1 = ${totalPersons} คน\n` +
+      `ค่าบริการ: ${cost.total.toLocaleString()} บาท\n` +
+      (cost.discountNotes.length ? `ส่วนลดบุตร/ธิดา: ${cost.discountNotes.join(', ')}\n` : '');
   }
   else if (dept === 'table') {
     text = `รายงานการจัดโต๊ะ\n` +
-           `วันที่: ${thDate}\n` +
-           `โต๊ะ: 1 โต๊ะ\n` +
-           `จำนวนที่นั่ง: ${totalPersons} คน\n` +
-           `ผู้ติดต่อ: ${visitor1Name} (${mainPhone})\n` +
-           `ผู้ต้องขัง: ${prisonerName} (#${prisonerId})`;
+      `วันที่: ${thDate}\n` +
+      `โต๊ะ: 1 โต๊ะ\n` +
+      `จำนวนที่นั่ง: ${totalPersons} คน\n` +
+      `ผู้ติดต่อ: ${visitor1Name} (${mainPhone})\n` +
+      `ผู้ต้องขัง: ${prisonerName} (#${prisonerId})`;
   }
   else if (dept === 'disciplinary') {
     text = `รายงานสำหรับส่วนทัณฑ์ (เบิกตัวผู้ต้องขัง)\n` +
-           `วันที่: ${thDate}\n` +
-           `ชื่อผู้ต้องขัง: ${prisonerName}\n` +
-           `เลขผู้ต้องขัง: ${prisonerId}\n` +
-           `แดน: ${wing}`;
+      `วันที่: ${thDate}\n` +
+      `ชื่อผู้ต้องขัง: ${prisonerName}\n` +
+      `เลขผู้ต้องขัง: ${prisonerId}\n` +
+      `แดน: ${wing}`;
   }
   else if (dept === 'kitchen') {
     // Get main visitor religion and allergy
     const mainReligion = document.getElementById('visitorReligion').value.trim();
     const mainAllergy = document.getElementById('visitorAllergy').value.trim();
     const extras = getExtraVisitors();
-    
+
     // Count religions
     const religionCounts = {};
     religionCounts[mainReligion] = (religionCounts[mainReligion] || 0) + 1;
     extras.forEach(v => {
       if (v.religion) religionCounts[v.religion] = (religionCounts[v.religion] || 0) + 1;
     });
-    
+
     // Count allergies
     const allergyCounts = {};
     const mainAllergyLabel = mainAllergy || 'ไม่มี';
@@ -291,39 +291,39 @@ function copyDeptReport(dept) {
       const allergyLabel = v.allergy || 'ไม่มี';
       allergyCounts[allergyLabel] = (allergyCounts[allergyLabel] || 0) + 1;
     });
-    
+
     // Build religion text
     let religionText = '';
     Object.entries(religionCounts).forEach(([religion, count]) => {
       const note = religion === 'อิสลาม' ? ' (อาหารฮาลาล)' : '';
       religionText += `• ${religion}: ${count} คน${note}\n`;
     });
-    
+
     // Build allergy text
     let allergyText = '';
     Object.entries(allergyCounts).forEach(([allergy, count]) => {
       const label = allergy === 'ไม่มี' ? '✅ ไม่มี' : `⚠️ ${allergy}`;
       allergyText += `• ${label}: ${count} คน\n`;
     });
-    
+
     text = `รายงานสำหรับครัว\n` +
-           `วันที่: ${thDate}\n` +
-           `รวมทั้งหมด: ญาติ ${n} คน + ผู้ต้องขัง 1 คน = ${totalPersons} คน\n` +
-           `ผู้ใหญ่ (ญาติ): ${c.adults} คน\n` +
-           `เด็ก 5-8 ปี (ญาติ): ${c.kids5_8} คน${c.kids5_8Names.length ? ' (' + c.kids5_8Names.join(', ') + ')' : ''}\n` +
-           `เด็กต่ำกว่า 5 ปี (ญาติ): ${c.kidsUnder5} คน${c.kidsUnder5Names.length ? ' (' + c.kidsUnder5Names.join(', ') + ')' : ''}\n\n` +
-           `📊 ข้อมูลศาสนา:\n${religionText}\n` +
-           `⚠️ การแพ้อาหาร:\n${allergyText}\n` +
-           `หมายเหตุ: รวมผู้ต้องขัง 1 คนด้วย`;
+      `วันที่: ${thDate}\n` +
+      `รวมทั้งหมด: ญาติ ${n} คน + ผู้ต้องขัง 1 คน = ${totalPersons} คน\n` +
+      `ผู้ใหญ่ (ญาติ): ${c.adults} คน\n` +
+      `เด็ก 5-8 ปี (ญาติ): ${c.kids5_8} คน${c.kids5_8Names.length ? ' (' + c.kids5_8Names.join(', ') + ')' : ''}\n` +
+      `เด็กต่ำกว่า 5 ปี (ญาติ): ${c.kidsUnder5} คน${c.kidsUnder5Names.length ? ' (' + c.kidsUnder5Names.join(', ') + ')' : ''}\n\n` +
+      `📊 ข้อมูลศาสนา:\n${religionText}\n` +
+      `⚠️ การแพ้อาหาร:\n${allergyText}\n` +
+      `หมายเหตุ: รวมผู้ต้องขัง 1 คนด้วย`;
   }
   else if (dept === 'bakery') {
     text = `รายงานสำหรับเบเกอรี่\n` +
-           `วันที่: ${thDate}\n` +
-           `รวมทั้งหมด: ญาติ ${n} คน + ผู้ต้องขัง 1 คน = ${totalPersons} คน\n` +
-           `ผู้ใหญ่ (ญาติ): ${c.adults} คน\n` +
-           `เด็ก 5-8 ปี (ญาติ): ${c.kids5_8} คน${c.kids5_8Names.length ? ' (' + c.kids5_8Names.join(', ') + ')' : ''}\n` +
-           `เด็กต่ำกว่า 5 ปี (ญาติ): ${c.kidsUnder5} คน${c.kidsUnder5Names.length ? ' (' + c.kidsUnder5Names.join(', ') + ')' : ''}\n` +
-           `หมายเหตุ: รวมผู้ต้องขัง 1 คนด้วย`;
+      `วันที่: ${thDate}\n` +
+      `รวมทั้งหมด: ญาติ ${n} คน + ผู้ต้องขัง 1 คน = ${totalPersons} คน\n` +
+      `ผู้ใหญ่ (ญาติ): ${c.adults} คน\n` +
+      `เด็ก 5-8 ปี (ญาติ): ${c.kids5_8} คน${c.kids5_8Names.length ? ' (' + c.kids5_8Names.join(', ') + ')' : ''}\n` +
+      `เด็กต่ำกว่า 5 ปี (ญาติ): ${c.kidsUnder5} คน${c.kidsUnder5Names.length ? ' (' + c.kidsUnder5Names.join(', ') + ')' : ''}\n` +
+      `หมายเหตุ: รวมผู้ต้องขัง 1 คนด้วย`;
   }
 
   if (text) {
@@ -335,7 +335,7 @@ function copyDeptReport(dept) {
   }
 }
 
-  // ===== PRISONER MASTER DATA (from Google Sheet via Apps Script) =====
+// ===== PRISONER MASTER DATA (from Google Sheet via Apps Script) =====
 
 
 let prisonerMaster = [];
@@ -466,43 +466,43 @@ function checkPrisonerMatch() {
 // ===== VALIDATION =====
 function validate() {
   const fields = [
-    { id: 'visitorName',  label: 'ชื่อผู้ร่วมกิจกรรม' },
-    { id: 'visitorId',    label: 'เลขบัตรประชาชน' },
+    { id: 'visitorName', label: 'ชื่อผู้ร่วมกิจกรรม' },
+    { id: 'visitorId', label: 'เลขบัตรประชาชน' },
     { id: 'visitorPhone', label: 'เบอร์โทรศัพท์' },
-    { id: 'relation',     label: 'ความสัมพันธ์' },
+    { id: 'relation', label: 'ความสัมพันธ์' },
     { id: 'prisonerName', label: 'ชื่อผู้ต้องขัง' },
-    { id: 'prisonerId',   label: 'หมายเลขผู้ต้องขัง' },
-    { id: 'wing',         label: 'แดน' },
+    { id: 'prisonerId', label: 'หมายเลขผู้ต้องขัง' },
+    { id: 'wing', label: 'แดน' },
   ];
   for (const f of fields) {
     const el = document.getElementById(f.id);
     if (!el.value.trim()) { alert(`กรุณากรอก ${f.label}`); el.focus(); return false; }
   }
-  
+
   // Validate main visitor religion (required)
   const mainReligion = document.getElementById('visitorReligion');
   if (!mainReligion.value.trim()) { alert('กรุณาเลือกศาสนา'); mainReligion.focus(); return false; }
-  
+
   // Validate main visitor allergy (required)
   const mainAllergy = document.getElementById('visitorAllergy');
   if (!mainAllergy.value.trim()) { alert('กรุณาระบุการแพ้อาหาร (ถ้าไม่มีให้กรอก \"ไม่มี\")'); mainAllergy.focus(); return false; }
-  
+
   // Validate extra visitors (name + id + religion + allergy)
   const n = parseInt(document.getElementById('visitorCount').value);
   for (let i = 2; i <= n; i++) {
     const nameEl = document.getElementById('extraVisitorName' + i);
-    const idEl   = document.getElementById('extraVisitorId' + i);
+    const idEl = document.getElementById('extraVisitorId' + i);
     if (nameEl && !nameEl.value.trim()) { alert('กรุณากรอกชื่อผู้เข้าร่วมกิจกรรมคนที่ ' + i); nameEl.focus(); return false; }
     if (idEl && !idEl.value.trim()) { alert('กรุณากรอกเลขบัตรประชาชนผู้เข้าร่วมกิจกรรมคนที่ ' + i); idEl.focus(); return false; }
-    
+
     // Validate religion for extra visitors
     const religionEl = document.getElementById('extraVisitorReligion' + i);
     if (religionEl && !religionEl.value.trim()) { alert('กรุณาเลือกศาสนาสำหรับผู้เข้าร่วมกิจกรรมคนที่ ' + i); religionEl.focus(); return false; }
-    
+
     // Validate allergy for extra visitors
     const allergyEl = document.getElementById('extraVisitorAllergy' + i);
     if (allergyEl && !allergyEl.value.trim()) { alert('กรุณาระบุการแพ้อาหารสำหรับผู้เข้าร่วมกิจกรรมคนที่ ' + i + ' (ถ้าไม่มีให้กรอก \"ไม่มี\")'); allergyEl.focus(); return false; }
-    
+
     const relEl = document.getElementById('extraVisitorRelation' + i);
     if (relEl && !relEl.value) { alert('กรุณาเลือกความสัมพันธ์ผู้ร่วมกิจกรรมคนที่ ' + i); relEl.focus(); return false; }
     if (relEl && relEl.value === 'บุตร / ธิดา') {
@@ -546,13 +546,13 @@ function goToConfirm() {
   const n = parseInt(document.getElementById('visitorCount').value);
   const totalPersons = n + 1;
   const d = parseLocalDate(selectedDate);  // ✅ parse local ไม่ผ่าน UTC
-  const thDate = d.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  const thDate = d.toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   const extras = getExtraVisitors();
   const visitor1Name = document.getElementById('visitorName').value.trim();
-  const visitor1Id   = document.getElementById('visitorId').value.trim();
+  const visitor1Id = document.getElementById('visitorId').value.trim();
   const mainRelation = document.getElementById('relation').value;
-  const mainPhone    = document.getElementById('visitorPhone').value.trim();
+  const mainPhone = document.getElementById('visitorPhone').value.trim();
 
   const cost = calculateTotal();
   const c = cost;
@@ -646,7 +646,7 @@ function goToConfirm() {
         const cleanText = `การจองกิจกรรม Chance & Change Cafe\nวันที่: ${thDate}\nผู้จอง: ${visitor1Name} (${mainPhone})\nจำนวน: ${totalPersons} คน\nผู้ต้องขัง: ${prisonerName} (#${prisonerId})\nรวม: ${cost.total} บาท\nRef หลังส่ง: จะได้รับทันที`;
         navigator.clipboard.writeText(cleanText).then(() => {
           copyBtn.innerHTML = '<i class="ti ti-check"></i> คัดลอกแล้ว';
-          setTimeout(() => { if(copyBtn) copyBtn.innerHTML = '<i class="ti ti-copy"></i> คัดลอกสรุปการจองของฉัน (บันทึกส่วนตัว)'; }, 1800);
+          setTimeout(() => { if (copyBtn) copyBtn.innerHTML = '<i class="ti ti-copy"></i> คัดลอกสรุปการจองของฉัน (บันทึกส่วนตัว)'; }, 1800);
         }).catch(() => alert(cleanText));
       };
       summaryEl.appendChild(copyBtn);
@@ -664,7 +664,7 @@ async function submitBooking() {
   const n = parseInt(document.getElementById('visitorCount').value);
   const totalPersons = n + 1;
   const d = parseLocalDate(selectedDate);  // ✅ parse local ไม่ผ่าน UTC
-  const thDate = d.toLocaleDateString('th-TH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  const thDate = d.toLocaleDateString('th-TH', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const now = new Date().toLocaleString('th-TH');
 
   const extras = getExtraVisitors();
@@ -674,18 +674,18 @@ async function submitBooking() {
 
   const prisonerId = document.getElementById('prisonerId').value.trim();
 
-// ── ตรวจสอบเลขผู้ต้องขังซ้ำในวันเดียวกัน ──
-   document.getElementById('overlay').classList.add('show');
-   document.getElementById('submitBtn').disabled = true;
-   try {
-     const rows = await fetchAllReservations();
-     if (rows) {
-       const activeStatuses = ['รอตรวจสอบวินัย', 'รอตรวจสอบผู้เข้าร่วม', 'รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น'];
-       const duplicate = rows.find(r =>
-         String(r.prisonerId || '').trim() === prisonerId &&
-         (r.visitDateISO || '') === selectedDate &&
-         activeStatuses.includes(r.status)
-       );
+  // ── ตรวจสอบเลขผู้ต้องขังซ้ำในวันเดียวกัน ──
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('submitBtn').disabled = true;
+  try {
+    const rows = await fetchAllReservations();
+    if (rows) {
+      const activeStatuses = ['รอตรวจสอบวินัย', 'รอตรวจสอบผู้เข้าร่วม', 'รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น'];
+      const duplicate = rows.find(r =>
+        String(r.prisonerId || '').trim() === prisonerId &&
+        (r.visitDateISO || '') === selectedDate &&
+        activeStatuses.includes(r.status)
+      );
       if (duplicate) {
         document.getElementById('overlay').classList.remove('show');
         document.getElementById('submitBtn').disabled = false;
@@ -693,7 +693,7 @@ async function submitBooking() {
         return;
       }
     }
-  } catch(err) {
+  } catch (err) {
     console.warn('Duplicate check skipped:', err);
   }
 
@@ -810,7 +810,7 @@ async function submitBooking() {
   try {
     sessionStorage.setItem('lastRef', ref);
     sessionStorage.setItem('lastPrisonerId', data.prisonerId);
-  } catch(e) {}
+  } catch (e) { }
 
   showPage(3);
 }
@@ -821,7 +821,7 @@ function copyRef() {
     const btn = document.getElementById('copyRefBtn');
     btn.innerHTML = '<i class="ti ti-check"></i> คัดลอกแล้ว';
     setTimeout(() => { btn.innerHTML = '<i class="ti ti-copy"></i> คัดลอก Ref'; }, 2000);
-  }).catch(() => {});
+  }).catch(() => { });
 }
 
 function showPage(n) {
