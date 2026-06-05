@@ -18,7 +18,7 @@ const SIDEBAR_MENU = {
   User: ['home']
 };
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz7QfLcMh6oqW9LoDkKtWKxrPBfi1KIRRs-INH-ZDxHzKAyO4126NCFuAW9qbtwrQLFTg/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4e8PcvNkodHjCa-QAHCkGEMz3ojubiBDQuYLu0uRTrJmemWLTUaxXUsx8ypZFX_j06A/exec';
 
 // ===== STATE =====
 let allRows = [];
