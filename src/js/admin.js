@@ -10,8 +10,8 @@ const PERMISSIONS = {
 
 // Sidebar menu visibility by role
 const SIDEBAR_MENU = {
-  Superadmin: ['home', 'reservations', 'reports', 'eventlog'],
-  Admin: ['home', 'reservations', 'reports', 'eventlog'],
+  Superadmin: ['home', 'reservations', 'visitors', 'users', 'roles', 'reports', 'eventlog', 'settings'],
+  Admin: ['home', 'reservations', 'visitors', 'users', 'reports', 'eventlog', 'settings'],
   Finance: ['reservations', 'reports'],
   Vinai: ['reservations', 'reports'],
   Tadtel: ['reservations', 'reports'],
@@ -25,6 +25,14 @@ let allRows = [];
 let currentPage = 1;
 let pageSize = 10;
 let currentUser = null;
+
+// Visitors state
+let allVisitors = [];
+let visitorsCurrentPage = 1;
+let visitorsPageSize = 10;
+
+// Users state
+let allUsers = [];
 
 // ===== LOGIN =====
 async function doLogin() {
@@ -67,12 +75,19 @@ currentUser = {
     document.getElementById('dash').style.display = 'block';
     document.getElementById('topDate').textContent = new Date().toLocaleDateString('th-TH', {year:'numeric',month:'long',day:'numeric'});
     
-    // Show user info in sidebar
-    document.getElementById('userRole').textContent = currentUser.role;
-    document.getElementById('userName').textContent = currentUser.username;
-document.getElementById('userInfo').style.display = 'block';
-      
-// Show/hide sidebar menu items based on role
+// Show user info in sidebar
+     document.getElementById('userRole').textContent = currentUser.role;
+     document.getElementById('userName').textContent = currentUser.username;
+     document.getElementById('userInfo').style.display = 'block';
+     
+     // Add/remove superadmin-mode class for CSS-based hiding of admin-only elements
+     if (currentUser.role === 'Superadmin') {
+       document.body.classList.add('superadmin-mode');
+     } else {
+       document.body.classList.remove('superadmin-mode');
+     }
+       
+     // Show/hide sidebar menu items based on role
        const visibleMenu = SIDEBAR_MENU[currentUser.role] || [];
        document.querySelectorAll('.sb-link').forEach(link => {
          const view = link.getAttribute('data-view');
@@ -111,6 +126,10 @@ function hasPermission(action) {
   return currentUser && PERMISSIONS[currentUser.role] && PERMISSIONS[currentUser.role].includes(action);
 }
 
+function isSuperadmin() {
+  return currentUser && currentUser.role === 'Superadmin';
+}
+
 function logEvent(action, details) {
   const event = {
     timestamp: new Date().toLocaleString('th-TH'),
@@ -132,6 +151,7 @@ function doLogout() {
   document.getElementById('passInput').value = '';
   document.getElementById('userInput').value = '';
   document.getElementById('userInfo').style.display = 'none';
+  document.body.classList.remove('superadmin-mode');
   // Reset sidebar menu visibility
   document.querySelectorAll('.sb-link').forEach(link => {
     link.style.display = '';
@@ -432,8 +452,14 @@ function switchView(v) {
     renderReportsView();
   } else if (v === 'eventlog') {
     renderEventlog();
-  } else if (v === 'addUser') {
-    renderAddUser();
+  } else if (v === 'visitors') {
+    loadVisitors();
+  } else if (v === 'users') {
+    loadUsersTable();
+  } else if (v === 'roles') {
+    renderRolesTable();
+  } else if (v === 'settings') {
+    renderSettingsView();
   }
 
   // Dashboard home view - only for Admin/Superadmin who have access
@@ -748,163 +774,18 @@ if (financeCanvasEl) {
     financeCanvasEl.style.cursor = 'default';
     financeCanvasEl.title = '';
   });
-  // Tap for mobile
-  financeCanvasEl.addEventListener('click', (e) => {
-    if ('ontouchstart' in window) {
-      showChartTooltip(financeCanvasEl, financeChartCache, financeCanvasEl.getBoundingClientRect(), e.clientX, e.clientY);
-      setTimeout(hideChartTooltip, 2000);
-    }
-  });
-}
-
-function renderDashboardHome() {
-  // Role‑based KPI visibility
-  const role = currentUser && currentUser.role;
-  const visible = {
-    Superadmin: ['statTotal','statWait','statOk','statReject','statUniquePrisoners','statThisWeek','statThisMonth','statUniqueVisitors'],
-    Admin: ['statTotal','statWait','statOk','statReject','statUniquePrisoners','statThisWeek','statThisMonth','statUniqueVisitors'],
-    Vinai: ['statWait','statThisWeek'],
-    Tadtel: ['statOk','statThisWeek'],
-    Finance: ['statOk','statThisWeek','statUniqueVisitors']
-  }[role]||[];
-  // hide all KPI cards then show allowed
-  ['statTotal','statWait','statOk','statReject','statUniquePrisoners','statThisWeek','statThisMonth','statUniqueVisitors'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el && el.parentElement && el.parentElement.parentElement){
-      el.parentElement.parentElement.style.display = visible.includes(id)?'' : 'none';
-    }
-  });
-
-  // Show pipeline for admin roles
-  const pipeline = document.getElementById('approvalPipeline');
-  if(pipeline && (role === 'Superadmin' || role === 'Admin')) {
-    pipeline.style.display = 'block';
-  } else if(pipeline) {
-    pipeline.style.display = 'none';
-  }
-
-  const recentEl = document.getElementById('recentBookings');
-  if (!recentEl) return;
-
-  renderFinanceOverview();
-
-  const total = allRows.length;
-
-  // recent 5
-  if (!total) {
-    recentEl.innerHTML = '<div style="color:#888;font-size:12px">ยังไม่มีข้อมูล</div>';
-    document.getElementById('statUniquePrisoners').textContent = '0';
-    document.getElementById('statThisWeek').textContent = '0';
-    document.getElementById('statThisMonth').textContent = '0';
-    document.getElementById('statUniqueVisitors').textContent = '0';
-    const chartEl = document.getElementById('trendChart');
-    if (chartEl) chartEl.getContext && chartEl.getContext('2d').clearRect(0,0,chartEl.width,chartEl.height);
-    return;
-  }
-
-let rhtml = '';
-   allRows.slice(0, 5).forEach(r => {
-     const idx = allRows.indexOf(r);
-     const s = normalizeStatus(r.status);
-     let bcls = 'badge-pending-review';
-     if (s === 'รอชำระเงิน') bcls = 'badge-payment-pending';
-     else if (s === 'ชำระแล้ว') bcls = 'badge-paid';
-     else if (s === 'เสร็จสิ้น') bcls = 'badge-completed';
-     else if (s === 'ไม่อนุมัติ') bcls = 'badge-rejected';
-     else if (s === 'ยกเลิก') bcls = 'badge-cancelled';
-     rhtml += `<div onclick="viewDetail(${idx});switchView('reservations')" style="padding:10px 2px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;flex-direction:column;gap:6px;">
-       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-         <b style="font-size:13px;color:var(--blue)">${r.ref}</b>
-         <span class="badge ${bcls}" style="font-size:11px;padding:2px 8px;white-space:nowrap">${s}</span>
-       </div>
-       <div style="display:flex;flex-direction:column;gap:2px;font-size:12px">
-         <span><strong style="color:var(--text2)">👤</strong> ${r.visitorName || ''}</span>
-         <span><strong style="color:var(--text2)">🏢</strong> ${r.prisonerName || ''} (#${r.prisonerId || ''})</span>
-         <span><strong style="color:var(--text2)">📅</strong> ${r.visitDate || ''} • <strong style="color:var(--blue)">${(r.total||0).toLocaleString()} บ.</strong></span>
-       </div>
-     </div>`;
+// Tap for mobile
+   financeCanvasEl.addEventListener('click', (e) => {
+     if ('ontouchstart' in window) {
+       showChartTooltip(financeCanvasEl, financeChartCache, financeCanvasEl.getBoundingClientRect(), e.clientX, e.clientY);
+       setTimeout(hideChartTooltip, 2000);
+     }
    });
-   
-   const recentCountEl = document.getElementById('recentCount');
-   if (recentCountEl) recentCountEl.textContent = '(' + allRows.length + ' รายการทั้งหมด)';
-   
-   recentEl.innerHTML = rhtml || '<div style="color:#888;font-size:13px;padding:12px;text-align:center">ยังไม่มีข้อมูล</div>';
-   
-// ===== Status Pipeline Visualization =====
-    const statusOrder = ['รอตรวจสอบวินัย', 'รอตรวจสอบผู้เข้าร่วม', 'รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น', 'ไม่อนุมัติ', 'ยกเลิก'];
-    const statusLabels = {'รอตรวจสอบวินัย':'วินัย','รอตรวจสอบผู้เข้าร่วม':'ผู้เข้าร่วม','รอชำระเงิน':'ชำระเงิน','ชำระแล้ว':'ชำระแล้ว','เสร็จสิ้น':'เสร็จ','ไม่อนุมัติ':'ปฏิเสธ','ยกเลิก':'ยกเลิก'};
-    const statusCounts = {}; statusOrder.forEach(s => statusCounts[s] = 0);
-    allRows.forEach(r => { const s = normalizeStatus(r.status); if (statusCounts[s]!==undefined) statusCounts[s]++; });
-    const grandTotal = allRows.length;
-    let pipelineHtml = '<div class="status-pipeline">';
-    statusOrder.forEach(status => {
-      const pct = grandTotal ? Math.round(statusCounts[status]/grandTotal*100) : 0;
-      const colors = {'รอตรวจสอบวินัย':'var(--status-discipline)','รอตรวจสอบผู้เข้าร่วม':'var(--status-participant)','รอชำระเงิน':'var(--status-payment)','ชำระแล้ว':'var(--status-paid)','เสร็จสิ้น':'var(--status-completed)','ไม่อนุมัติ':'var(--status-rejected)','ยกเลิก':'var(--status-cancelled)'};
-      pipelineHtml += `<div class="status-pipeline-item" style="flex:1;min-width:55px;padding:6px 4px;border-radius:8px;background:${colors[status]}22;border:1px solid ${colors[status]}33;text-align:center">
-        <div style="font-size:10px;color:var(--text2);margin-bottom:2px">${statusLabels[status]}</div>
-        <div style="font-size:14px;font-weight:700;color:var(--text)">${statusCounts[status]}</div>
-        <div style="font-size:9px;color:var(--text2)" class="status-pct">${pct}% ของทั้งหมด</div>
-      </div>`;
-    });
-    pipelineHtml += '</div>';
-    const pipelineEl = document.getElementById('statusPipeline');
-    if (pipelineEl) pipelineEl.innerHTML = pipelineHtml;
+ }
 
-  // ===== NEW: Additional professional metrics =====
-  const uniquePrisoners = new Set();
-  const uniqueVisitors = new Set();
-  const now = new Date();
-  const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - ((now.getDay() + 6) % 7)); // Monday
-  startOfWeek.setHours(0,0,0,0);
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+ let trendDataCache = []; // for hover detection
 
-  let weekCount = 0, monthCount = 0;
-
-  allRows.forEach(r => {
-    if (r.prisonerId) uniquePrisoners.add(String(r.prisonerId).trim());
-    const vid = r.visitorId || r.visitorName;
-    if (vid) uniqueVisitors.add(String(vid).trim());
-
-    // Prefer ISO date for accuracy
-    let visitKey = r.visitDateISO;
-    if (!visitKey && r.visitDate) {
-      // Fallback: try to parse Thai date (rough) or use timestamp date
-      const ts = r.timestamp ? new Date(r.timestamp.replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$2-$1')) : null;
-      if (ts && !isNaN(ts)) visitKey = ts.toISOString().slice(0,10);
-    }
-    if (visitKey) {
-      const vDate = new Date(visitKey);
-      if (!isNaN(vDate)) {
-        if (vDate >= startOfWeek) weekCount++;
-        if (vDate >= startOfMonth) monthCount++;
-      }
-    }
-  });
-
-  const uniqueP = document.getElementById('statUniquePrisoners');
-  const thisWeekEl = document.getElementById('statThisWeek');
-  const thisMonthEl = document.getElementById('statThisMonth');
-  const uniqueV = document.getElementById('statUniqueVisitors');
-
-  if (uniqueP) uniqueP.textContent = uniquePrisoners.size;
-  if (thisWeekEl) thisWeekEl.textContent = weekCount;
-  if (thisMonthEl) thisMonthEl.textContent = monthCount;
-  if (uniqueV) uniqueV.textContent = uniqueVisitors.size;
-
-  // Last updated in header
-  const lastUpdatedEl = document.getElementById('overviewLastUpdated');
-  if (lastUpdatedEl) {
-    lastUpdatedEl.textContent = 'อัปเดต ' + new Date().toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
-  }
-
-  // Trend Chart
-  drawReservationTrendChart();
-}
-
-let trendDataCache = []; // for hover detection
-
-function drawReservationTrendChart() {
+ function drawReservationTrendChart() {
   const canvas = document.getElementById('trendChart');
   if (!canvas) return;
 
@@ -1043,21 +924,6 @@ if (trendCanvas) {
     }
   });
 }
-
-// Redraw trend chart on window resize (when overview is visible)
-window.addEventListener('resize', () => {
-  const homeView = document.getElementById('view-home');
-  if (homeView && homeView.style.display !== 'none' && document.getElementById('trendChart')) {
-    clearTimeout(window._trendResizeTimer);
-    window._trendResizeTimer = setTimeout(() => {
-      if (typeof drawReservationTrendChart === 'function') drawReservationTrendChart();
-      const financeCanvas = document.getElementById('financeChart');
-      if (financeCanvas && typeof drawFinanceLineChart === 'function') {
-        drawFinanceLineChart(financeCanvas, computeFinanceTimeSeries(allRows));
-      }
-    }, 120);
-  }
-});
 
 // ===== MOBILE CHART INTERACTIONS - Touch/Tap Tooltips =====
 let activeTooltip = null;
@@ -2699,62 +2565,15 @@ function fetchRolesList() {
 }
 
 function populateRoleDropdown(roles) {
-  const select = document.getElementById('addUserRole');
-  select.innerHTML = '<option value="">เลือกบทบาท</option>';
-  roles.forEach(role => {
-    const option = document.createElement('option');
-    option.value = role.roleName;
-    option.textContent = role.roleName;
-    select.appendChild(option);
-  });
-}
-
-function createAddUser() {
-  const username = document.getElementById('addUserUsername').value.trim();
-  const password = document.getElementById('addUserPassword').value;
-  const confirmPassword = document.getElementById('addUserConfirmPassword').value;
-  const role = document.getElementById('addUserRole').value;
-
-  if (!username || !password || !confirmPassword || !role) {
-    alert('กรุณากรอกข้อมูลให้ครบถ้วน');
-    return;
-  }
-  if (password !== confirmPassword) {
-    alert('รหัสผ่านและยืนยันรหัสผ่านไม่ตรงกัน');
-    return;
-  }
-  if (password.length < 6) {
-    alert('รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
-    return;
-  }
-
-  // Call createUser action
-  fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    redirect: 'follow',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: 'createUser', username: username, password: password, role: role, pass: currentUser.password })
-  })
-  .then(resp => resp.json())
-  .then(data => {
-    if (data.status === 'ok') {
-      alert('สร้างผู้ใช้สำเร็จ');
-      // Clear form
-      document.getElementById('addUserUsername').value = '';
-      document.getElementById('addUserPassword').value = '';
-      document.getElementById('addUserConfirmPassword').value = '';
-      document.getElementById('addUserRole').value = '';
-      // Reload the table
-      loadAddUserTable();
-    } else {
-      alert('เกิดข้อผิดพลาด: ' + data.message);
-    }
-  })
-  .catch(err => {
-    console.error('Error creating user:', err);
-    alert('เกิดข้อผิดพลาดในการเชื่อมต่อ');
-  });
-}
+   const select = document.getElementById('addUserRole');
+   select.innerHTML = '<option value="">เลือกบทบาท</option>';
+   roles.forEach(role => {
+     const option = document.createElement('option');
+     option.value = role.roleName;
+     option.textContent = role.roleName;
+     select.appendChild(option);
+   });
+ }
 
 function loadAddUserTable() {
   fetch(APPS_SCRIPT_URL, {
@@ -2786,14 +2605,13 @@ function renderAddUserTable(users) {
   }
 
   tbody.innerHTML = users.map(u => {
-    // Determine if user can be edited/deleted? For simplicity, we just show.
     return `<tr>
       <td>${u.username}</td>
       <td>${u.role}</td>
       <td>${u.displayName || '-'}</td>
       <td>
-        <button class="btn-refresh" onclick="editUser('${u.username}')">แก้ไข</button>
-        <button class="btn-refresh" onclick="deleteUser('${u.username}')">ลบ</button>
+        <button class="btn-refresh superadmin-only" onclick="editUser('${u.username}')">แก้ไข</button>
+        <button class="btn-refresh superadmin-only" onclick="deleteUser('${u.username}')">ลบ</button>
       </td>
     </tr>`;
   }).join('');
@@ -2801,12 +2619,19 @@ function renderAddUserTable(users) {
 
 // Placeholder functions for edit/delete (optional)
 function editUser(username) {
-  alert('ฟังก์ชันแก้ไขผู้ใช้ยังไม่ได้ทำการติดตั้ง');
-}
-function deleteUser(username) {
-  if (confirm(`คุณต้องการลบผู้ใช้ "${username}" จริงหรือไม่?`)) {
-    alert('ฟังก์ชันลบผู้ใช้ยังไม่ได้ทำการติดตั้ง');
+  if (!isSuperadmin()) {
+    alert('เฉพาะผู้ดูแลระบบ (Superadmin) เท่านั้นที่สามารถดำเนินการได้');
+    return;
   }
+  openEditUserModal(allUsers.findIndex(u => u.username === username));
+}
+
+function deleteUser(username) {
+  if (!isSuperadmin()) {
+    alert('เฉพาะผู้ดูแลระบบ (Superadmin) เท่านั้นที่สามารถดำเนินการได้');
+    return;
+  }
+  confirmDeleteUser(username);
 }
 
 function printDailyDeptReports() {
@@ -2922,6 +2747,49 @@ function getReportsFilteredRows() {
     return true;
   });
 }
+
+// ===== SEARCH BOOKING FOR EXTRA VISITOR =====
+async function openSearchBookingModal() {
+  document.getElementById('searchBookingModalBg').classList.add('show');
+  document.getElementById('searchBookingInput').value = '';
+  await loadBookingsForExtraVisitor();
+}
+
+function closeSearchBookingModal(e) {
+  if (!e || e.target === document.getElementById('searchBookingModalBg')) {
+    document.getElementById('searchBookingModalBg').classList.remove('show');
+  }
+}
+
+function filterBookingsForExtraVisitor() {
+  const q = document.getElementById('searchBookingInput').value.toLowerCase();
+  const tbody = document.getElementById('addExtraVisitorBookingsBody');
+  if (!tbody) return;
+
+  const filtered = allRows.filter(r => {
+    if (!r.ref || String(r.ref).trim() === '') return false;
+    if (q && !JSON.stringify(r).toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">ไม่พบข้อมูลการจอง</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((b, idx) => `
+    <tr>
+      <td data-label="Ref"><strong style="color:var(--blue)">${b.ref || '-'}</strong></td>
+      <td data-label="ผู้เยี่ยม">${b.visitorName || '-'} (#${b.visitorId || '-'})</td>
+      <td data-label="แดน" class="hide-mobile">${b.wing || '-'}</td>
+      <td data-label="จัดการ">
+        <button class="btn-refresh" onclick="openAddExtraVisitorModal('${b.ref}', '${b.visitorName || ''}'); closeSearchBookingModal()" style="font-size:11px;padding:4px 8px">เพิ่มผู้เยี่ยม</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+/* ===== Add Extra Visitor to Existing Booking ===== */
 
 // ===== Populate date options for Reports page =====
 function populateReportsDateFilter() {
@@ -3227,6 +3095,1074 @@ function printSingleReport(type, date) {
   setTimeout(() => { printWin.focus(); printWin.print(); }, 300);
 }
 
-document.addEventListener('keydown', e => { if(e.key==='Escape') { closeModal(); closeDetailModal(); } });
+document.addEventListener('keydown', e => { 
+  if(e.key==='Escape') { 
+    closeModal(); 
+    closeDetailModal(); 
+    closeAddVisitorModal(); 
+    closeAddUserModal(); 
+    closeChangePasswordModal(); 
+    closeSearchBookingModal();
+    closeAddExtraVisitorModal();
+  } 
+});
 document.getElementById('passInput').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 document.getElementById('userInput').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+// ===== SETTINGS VIEW =====
+function renderSettingsView() {
+  if (currentUser) {
+    document.getElementById('settingsUsername').textContent = currentUser.username || '-';
+    document.getElementById('settingsDisplayName').textContent = currentUser.displayName || currentUser.username || '-';
+    document.getElementById('settingsRole').textContent = currentUser.role || '-';
+  }
+}
+
+function openChangePasswordModal() {
+  document.getElementById('changePasswordModalBg').classList.add('show');
+  document.getElementById('currentPassword').value = '';
+  document.getElementById('newPassword').value = '';
+  document.getElementById('confirmPassword').value = '';
+  document.getElementById('changePasswordError').style.display = 'none';
+}
+
+function closeChangePasswordModal(e) {
+  if (!e || e.target === document.getElementById('changePasswordModalBg')) {
+    document.getElementById('changePasswordModalBg').classList.remove('show');
+  }
+}
+
+async function changePassword() {
+  const currentPass = document.getElementById('currentPassword').value;
+  const newPass = document.getElementById('newPassword').value;
+  const confirmPass = document.getElementById('confirmPassword').value;
+
+  if (!currentPass || !newPass || !confirmPass) {
+    document.getElementById('changePasswordError').textContent = 'กรุณากรอกข้อมูลให้ครบถ้วน';
+    document.getElementById('changePasswordError').style.display = 'block';
+    return;
+  }
+
+  if (newPass !== confirmPass) {
+    document.getElementById('changePasswordError').textContent = 'รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน';
+    document.getElementById('changePasswordError').style.display = 'block';
+    return;
+  }
+
+  if (newPass.length < 6) {
+    document.getElementById('changePasswordError').textContent = 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร';
+    document.getElementById('changePasswordError').style.display = 'block';
+    return;
+  }
+
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'changePassword', username: currentUser.username, password: currentPass, newPassword: newPass })
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.status !== 'ok') throw new Error(data.message || 'เปลี่ยนรหัสผ่านไม่สำเร็จ');
+
+    closeChangePasswordModal();
+    logEvent('change_password', 'เปลี่ยนรหัสผ่านสำเร็จ');
+    alert('เปลี่ยนรหัสผ่านสำเร็จ');
+  } catch(e) {
+    document.getElementById('changePasswordError').textContent = e.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+    document.getElementById('changePasswordError').style.display = 'block';
+  }
+}
+
+// ===== VISITORS MANAGEMENT =====
+async function loadVisitors() {
+  const tbody = document.getElementById('visitorsTableBody');
+  tbody.innerHTML = '<tr><td colspan="6" class="loading-state"><span class="spinner-sm"></span>กำลังโหลด...</td></tr>';
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'getVisitors', username: currentUser.username, password: currentUser.password })
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.status === 'ok') {
+      allVisitors = data.visitors || [];
+      renderVisitorsTable();
+    } else {
+      throw new Error(data.message || 'ไม่สามารถโหลดข้อมูลผู้เยี่ยม');
+    }
+  } catch(e) {
+    console.error('Load visitors error:', e);
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-state">❌ โหลดข้อมูลไม่สำเร็จ: ${e.message}</td></tr>`;
+  }
+}
+
+function renderVisitorsTable() {
+  const q = document.getElementById('visitorsSearchBox').value.toLowerCase();
+  let visitors = allVisitors.filter(v => {
+    if (!v.name || String(v.name).trim() === '') return false;
+    if (q && !JSON.stringify(v).toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const totalFiltered = visitors.length;
+  document.getElementById('visitorsTableCount').textContent = totalFiltered + ' รายการ';
+
+  const totalPages = Math.ceil(totalFiltered / visitorsPageSize) || 1;
+  if (visitorsCurrentPage > totalPages) visitorsCurrentPage = totalPages;
+  if (visitorsCurrentPage < 1) visitorsCurrentPage = 1;
+
+  const startIdx = (visitorsCurrentPage - 1) * visitorsPageSize;
+  const pageVisitors = visitors.slice(startIdx, startIdx + visitorsPageSize);
+
+  const tbody = document.getElementById('visitorsTableBody');
+  if (!totalFiltered) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">ไม่พบข้อมูล</td></tr>';
+    document.getElementById('visitorsPagination').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = pageVisitors.map((v, idx) => {
+    const originalIdx = allVisitors.indexOf(v);
+    return `<tr>
+      <td data-label="ชื่อ">${v.name || '-'}</td>
+      <td data-label="บัตรประชาชน">${v.idCard || '-'}</td>
+      <td data-label="โทรศัพท์" class="hide-mobile">${v.phone || '-'}</td>
+      <td data-label="อีเมล" class="hide-mobile">${v.email || '-'}</td>
+      <td data-label="ความสัมพันธ์" class="hide-mobile">${v.relation || '-'}</td>
+<td data-label="การกระทำ">
+         <button class="btn-refresh superadmin-only" onclick="editVisitor('${originalIdx}')" style="font-size:11px;padding:4px 8px">แก้ไข</button>
+         <button class="btn-reject superadmin-only" onclick="deleteVisitor('${originalIdx}')" style="font-size:11px;padding:4px 8px">ลบ</button>
+       </td>
+    </tr>`;
+  }).join('');
+
+  renderVisitorsPagination(totalPages, totalFiltered);
+}
+
+function renderVisitorsPagination(totalPages, totalFiltered) {
+  const container = document.getElementById('visitorsPagination');
+  if (!container) return;
+  if (totalPages <= 1) {
+    container.innerHTML = '';
+    return;
+  }
+  const startItem = (visitorsCurrentPage - 1) * visitorsPageSize + 1;
+  const endItem = Math.min(visitorsCurrentPage * visitorsPageSize, totalFiltered);
+  let html = `
+    <div class="pagination-bar">
+      <div class="page-size">
+        แสดง 
+        <select onchange="visitorsChangePageSize(this.value)">
+          <option value="5" ${visitorsPageSize===5?'selected':''}>5</option>
+          <option value="10" ${visitorsPageSize===10?'selected':''}>10</option>
+          <option value="20" ${visitorsPageSize===20?'selected':''}>20</option>
+          <option value="50" ${visitorsPageSize===50?'selected':''}>50</option>
+        </select>
+        รายการ
+      </div>
+      <div class="page-info">หน้า ${visitorsCurrentPage} / ${totalPages} <span style="color:var(--text2)">(${startItem}-${endItem} จาก ${totalFiltered})</span></div>
+      <div class="page-nav">
+        <button onclick="visitorsChangePage(${visitorsCurrentPage-1})" ${visitorsCurrentPage===1 ? 'disabled' : ''}>←</button>
+  `;
+  const maxButtons = 5;
+  let startP = Math.max(1, visitorsCurrentPage - Math.floor(maxButtons/2));
+  let endP = Math.min(totalPages, startP + maxButtons - 1);
+  if (endP - startP + 1 < maxButtons) startP = Math.max(1, endP - maxButtons + 1);
+  if (startP > 1) {
+    html += `<button onclick="visitorsChangePage(1)">1</button>`;
+    if (startP > 2) html += `<span class="page-ellipsis">…</span>`;
+  }
+  for (let p = startP; p <= endP; p++) {
+    if (p === visitorsCurrentPage) {
+      html += `<span class="page-current">${p}</span>`;
+    } else {
+      html += `<button onclick="visitorsChangePage(${p})">${p}</button>`;
+    }
+  }
+  if (endP < totalPages) {
+    if (endP < totalPages - 1) html += `<span class="page-ellipsis">…</span>`;
+    html += `<button onclick="visitorsChangePage(${totalPages})">${totalPages}</button>`;
+  }
+  html += `<button onclick="visitorsChangePage(${visitorsCurrentPage+1})" ${visitorsCurrentPage===totalPages ? 'disabled' : ''}>→</button>
+      </div>
+    </div>`;
+  container.innerHTML = html;
+}
+
+function visitorsChangePage(p) {
+  if (p < 1) return;
+  visitorsCurrentPage = p;
+  renderVisitorsTable();
+}
+
+function visitorsChangePageSize(newSize) {
+  visitorsPageSize = parseInt(newSize, 10) || 10;
+  visitorsCurrentPage = 1;
+  renderVisitorsTable();
+}
+
+function openAddVisitorModal() {
+  if (!isSuperadmin()) {
+    alert('เฉพาะผู้ดูแลระบบ (Superadmin) เท่านั้นที่สามารถดำเนินการได้');
+    return;
+  }
+  document.getElementById('addVisitorModalBg').classList.add('show');
+  document.getElementById('addVisitorName').value = '';
+  document.getElementById('addVisitorIdCard').value = '';
+  document.getElementById('addVisitorPhone').value = '';
+  document.getElementById('addVisitorEmail').value = '';
+  document.getElementById('addVisitorRelation').value = '';
+  document.getElementById('addVisitorError').style.display = 'none';
+}
+
+function closeAddVisitorModal(e) {
+  if (!e || e.target === document.getElementById('addVisitorModalBg')) {
+    document.getElementById('addVisitorModalBg').classList.remove('show');
+  }
+}
+
+async function saveNewVisitor() {
+  if (!isSuperadmin()) {
+    alert('เฉพาะผู้ดูแลระบบ (Superadmin) เท่านั้นที่สามารถดำเนินการได้');
+    return;
+  }
+  const name = document.getElementById('addVisitorName').value.trim();
+  const idCard = document.getElementById('addVisitorIdCard').value.trim();
+  const phone = document.getElementById('addVisitorPhone').value.trim();
+  const email = document.getElementById('addVisitorEmail').value.trim();
+  const relation = document.getElementById('addVisitorRelation').value.trim();
+
+  if (!name || !idCard) {
+    document.getElementById('addVisitorError').textContent = 'กรุณากรอกชื่อและบัตรประชาชน';
+    document.getElementById('addVisitorError').style.display = 'block';
+    return;
+  }
+
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'createVisitor', username: currentUser.username, password: currentUser.password, name, idCard, phone, email, relation })
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.status !== 'ok') throw new Error(data.message || 'สร้างผู้เยี่ยมไม่สำเร็จ');
+
+    closeAddVisitorModal();
+    logEvent('create_visitor', `สร้างผู้เยี่ยมใหม่: ${name}`);
+    loadVisitors();
+    alert('สร้างผู้เยี่ยมสำเร็จ');
+  } catch(e) {
+    document.getElementById('addVisitorError').textContent = e.message || 'เกิดข้อผิดพลาด';
+    document.getElementById('addVisitorError').style.display = 'block';
+  }
+}
+
+async function editVisitor(idx) {
+  if (!isSuperadmin()) {
+    alert('เฉพาะผู้ดูแลระบบ (Superadmin) เท่านั้นที่สามารถดำเนินการได้');
+    return;
+  }
+  const visitor = allVisitors[idx];
+  if (!visitor) return;
+  // Populate edit form (reuse add modal)
+  document.getElementById('addVisitorName').value = visitor.name || '';
+  document.getElementById('addVisitorIdCard').value = visitor.idCard || '';
+  document.getElementById('addVisitorPhone').value = visitor.phone || '';
+  document.getElementById('addVisitorEmail').value = visitor.email || '';
+  document.getElementById('addVisitorRelation').value = visitor.relation || '';
+  document.getElementById('addVisitorModalBg').classList.add('show');
+  // Store editing index
+  document.getElementById('addVisitorModalBg').dataset.editIdx = idx;
+}
+
+/* ===== ADD EXTRA VISITOR TO EXISTING BOOKING ===== */
+async function loadBookingsForExtraVisitor() {
+  const tbody = document.getElementById('addExtraVisitorBookingsBody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" class="loading-state"><span class="spinner-sm"></span>กำลังโหลด...</td></tr>';
+  
+  // Use existing allRows data instead of API call
+  const bookings = allRows.filter(r => r.ref && String(r.ref).trim() !== '');
+  
+  if (bookings.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">ยังไม่มีข้อมูลการจอง</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = bookings.map((b, idx) => `
+    <tr>
+      <td data-label="Ref"><strong style="color:var(--blue)">${b.ref || '-'}</strong></td>
+      <td data-label="ผู้เยี่ยม">${b.visitorName || '-'} (#${b.visitorId || '-'})</td>
+      <td data-label="แดน" class="hide-mobile">${b.wing || '-'}</td>
+      <td data-label="จัดการ">
+        <button class="btn-refresh" onclick="openAddExtraVisitorModal('${b.ref}', '${b.visitorName || ''}'); closeSearchBookingModal()" style="font-size:11px;padding:4px 8px">เพิ่มผู้เยี่ยม</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openAddExtraVisitorModal(ref, visitorName) {
+  document.getElementById('addExtraVisitorBookingRef').textContent = ref;
+  document.getElementById('addExtraVisitorModalBg').dataset.bookingRef = ref;
+  document.getElementById('addExtraVisitorName').value = '';
+  document.getElementById('addExtraVisitorIdCard').value = '';
+  document.getElementById('addExtraVisitorRelation').value = '';
+  document.getElementById('addExtraVisitorAge').value = '';
+  document.getElementById('addExtraVisitorPricePreview').style.display = 'none';
+  document.getElementById('addExtraVisitorError').style.display = 'none';
+  
+  const booking = allRows.find(r => r.ref === ref);
+  if (booking) {
+    document.getElementById('addExtraVisitorBookingDetails').style.display = 'block';
+    document.getElementById('addExtraVisitorVisitorInfo').innerHTML = '<span style="color:var(--text2)">👤 ผู้เยี่ยม:</span> ' + (booking.visitorName || '-') + ' (#' + (booking.visitorId || '-') + ')';
+    document.getElementById('addExtraVisitorPrisonerInfo').innerHTML = '<span style="color:var(--text2)">🔒 ผู้ต้องขัง:</span> ' + (booking.prisonerName || '-') + ' (#' + (booking.prisonerId || '-') + ') - ' + (booking.wing || '-');
+    document.getElementById('addExtraVisitorDateInfo').textContent = '📅 วันที่เยี่ยม: ' + (booking.visitDate || '-');
+  } else {
+    document.getElementById('addExtraVisitorBookingDetails').style.display = 'none';
+  }
+  
+  document.getElementById('addExtraVisitorModalBg').classList.add('show');
+}
+
+function closeAddExtraVisitorModal(e) {
+  if (!e || e.target === document.getElementById('addExtraVisitorModalBg')) {
+    document.getElementById('addExtraVisitorModalBg').classList.remove('show');
+  }
+}
+
+function calculateExtraVisitorPrice(age) {
+  const a = parseInt(age) || 0;
+  if (a < 5) return 0;
+  if (a >= 5 && a <= 8) return 500;
+  return 1000;
+}
+
+async function saveExtraVisitor() {
+  const ref = document.getElementById('addExtraVisitorModalBg').dataset.bookingRef;
+  const name = document.getElementById('addExtraVisitorName').value.trim();
+  const idCard = document.getElementById('addExtraVisitorIdCard').value.trim();
+  const relation = document.getElementById('addExtraVisitorRelation').value;
+  const age = document.getElementById('addExtraVisitorAge').value;
+
+  if (!ref || !name || !idCard || !relation || !age) {
+    document.getElementById('addExtraVisitorError').textContent = 'กรุณากรอกข้อมูลให้ครบถ้วน';
+    document.getElementById('addExtraVisitorError').style.display = 'block';
+    return;
+  }
+
+  const price = calculateExtraVisitorPrice(age);
+
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'addExtraVisitor',
+        username: currentUser.username,
+        password: currentUser.password,
+        ref: ref,
+        extraVisitorName: name,
+        extraVisitorId: idCard,
+        extraVisitorRelation: relation,
+        extraVisitorAge: age,
+        extraVisitorPrice: price
+      })
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.status !== 'ok') throw new Error(data.message || 'เพิ่มผู้เยี่ยมไม่สำเร็จ');
+
+    closeAddExtraVisitorModal();
+    logEvent('add_extra_visitor', `เพิ่มผู้เยี่ยมเพิ่มเติมในการจอง ${ref}: ${name} (อายุ ${age}, ${price} บาท)`);
+    loadData();
+    renderDashboardHome();
+    alert('เพิ่มผู้เยี่ยมเพิ่มเติมสำเร็จ\nค่าบริการเพิ่ม: ' + price.toLocaleString() + ' บาท');
+  } catch(e) {
+    document.getElementById('addExtraVisitorError').textContent = e.message || 'เกิดข้อผิดพลาด';
+    document.getElementById('addExtraVisitorError').style.display = 'block';
+  }
+}
+
+async function deleteVisitor(idx) {
+  if (!isSuperadmin()) {
+    alert('เฉพาะผู้ดูแลระบบ (Superadmin) เท่านั้นที่สามารถดำเนินการได้');
+    return;
+  }
+  const visitor = allVisitors[idx];
+  if (!visitor) return;
+  if (!confirm(`คุณแน่ใจว่าต้องการลบผู้เยี่ยม "${visitor.name}" ใช่หรือไม่?`)) return;
+
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'deleteVisitor', username: currentUser.username, password: currentUser.password, id: visitor.id })
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.status !== 'ok') throw new Error(data.message || 'ลบผู้เยี่ยมไม่สำเร็จ');
+
+    logEvent('delete_visitor', `ลบผู้เยี่ยม: ${visitor.name}`);
+    loadVisitors();
+    alert('ลบผู้เยี่ยมสำเร็จ');
+  } catch(e) {
+    alert(e.message || 'เกิดข้อผิดพลาด');
+  }
+}
+
+// ===== USERS MANAGEMENT =====
+async function loadUsersTable() {
+  const tbody = document.getElementById('usersTableBody');
+  tbody.innerHTML = '<tr><td colspan="5" class="loading-state"><span class="spinner-sm"></span>กำลังโหลด...</td></tr>';
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'getUsers', username: currentUser.username, password: currentUser.password })
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.status === 'ok') {
+      allUsers = data.users || [];
+      renderUsersTable();
+    } else {
+      throw new Error(data.message || 'ไม่สามารถโหลดข้อมูลผู้ใช้');
+    }
+  } catch(e) {
+    console.error('Load users error:', e);
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">❌ โหลดข้อมูลไม่สำเร็จ: ${e.message}</td></tr>`;
+  }
+}
+
+function renderUsersTable() {
+  const q = document.getElementById('usersSearchBox').value.toLowerCase();
+  let users = allUsers.filter(u => {
+    if (!u.username || String(u.username).trim() === '') return false;
+    if (q && !JSON.stringify(u).toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('usersTableBody');
+  document.getElementById('usersTableCount').textContent = users.length + ' รายการ';
+
+  if (users.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">ยังไม่มีผู้ใช้ในระบบ</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = users.map((u, idx) => {
+    const originalIdx = allUsers.indexOf(u);
+    const isActive = u.active !== false;
+    return `<tr>
+      <td>${u.username || '-'}</td>
+      <td>${u.displayName || '-'}</td>
+      <td>${u.role || '-'}</td>
+      <td><span class="badge ${isActive ? 'badge-paid' : 'badge-rejected'}">${isActive ? 'ใช้งาน' : 'ปิดใช้งาน'}</span></td>
+      <td>
+        <button class="btn-refresh" onclick="openEditUserModal('${originalIdx}')" style="font-size:11px;padding:4px 8px">แก้ไข</button>
+        <button class="btn-reject" onclick="confirmDeleteUser('${u.username}')" style="font-size:11px;padding:4px 8px">ลบ</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function confirmDeleteUser(username) {
+  if (!isSuperadmin()) {
+    alert('เฉพาะผู้ดูแลระบบ (Superadmin) เท่านั้นที่สามารถดำเนินการได้');
+    return;
+  }
+  if (!confirm(`คุณแน่ใจว่าต้องการลบผู้ใช้ "${username}" ใช่หรือไม่?`)) return;
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'deleteUser', username: currentUser.username, password: currentUser.password, targetUsername: username })
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.status !== 'ok') throw new Error(data.message || 'ลบผู้ใช้ไม่สำเร็จ');
+
+    logEvent('delete_user', `ลบผู้ใช้: ${username}`);
+    loadUsersTable();
+    alert('ลบผู้ใช้สำเร็จ');
+  } catch(e) {
+    alert(e.message || 'เกิดข้อผิดพลาด');
+  }
+}
+
+function openAddUserModal() {
+  if (!isSuperadmin()) {
+    alert('เฉพาะผู้ดูแลระบบ (Superadmin) เท่านั้นที่สามารถดำเนินการได้');
+    return;
+  }
+   document.getElementById('addUserModalBg').classList.add('show');
+   document.getElementById('addUserModalTitle').textContent = '➕ เพิ่มผู้ใช้';
+   document.getElementById('addUserUsername').value = '';
+   document.getElementById('addUserDisplayName').value = '';
+   document.getElementById('addUserPassword').value = '';
+   document.getElementById('addUserConfirmPassword').value = '';
+   document.getElementById('addUserError').style.display = 'none';
+   delete document.getElementById('addUserModalBg').dataset.editUsername;
+   fetchRolesList();
+ }
+
+function openEditUserModal(idx) {
+  if (!isSuperadmin()) {
+    alert('เฉพาะผู้ดูแลระบบ (Superadmin) เท่านั้นที่สามารถดำเนินการได้');
+    return;
+  }
+  const user = allUsers[idx];
+  if (!user) return;
+  document.getElementById('addUserModalBg').classList.add('show');
+  document.getElementById('addUserModalTitle').textContent = '✏️ แก้ไขผู้ใช้';
+  document.getElementById('addUserUsername').value = user.username || '';
+  document.getElementById('addUserUsername').disabled = true;
+  document.getElementById('addUserDisplayName').value = user.displayName || '';
+  document.getElementById('addUserPassword').value = '';
+  document.getElementById('addUserConfirmPassword').value = '';
+  document.getElementById('addUserError').style.display = 'none';
+  document.getElementById('addUserModalBg').dataset.editUsername = user.username;
+  fetchRolesList();
+}
+
+function closeAddUserModal(e) {
+  if (!e || e.target === document.getElementById('addUserModalBg')) {
+    document.getElementById('addUserModalBg').classList.remove('show');
+    document.getElementById('addUserUsername').disabled = false;
+  }
+}
+
+async function saveNewUser() {
+  if (!isSuperadmin()) {
+    alert('เฉพาะผู้ดูแลระบบ (Superadmin) เท่านั้นที่สามารถดำเนินการได้');
+    return;
+  }
+  const username = document.getElementById('addUserUsername').value.trim();
+   const displayName = document.getElementById('addUserDisplayName').value.trim();
+   const password = document.getElementById('addUserPassword').value;
+   const confirmPassword = document.getElementById('addUserConfirmPassword').value;
+   const role = document.getElementById('addUserRole').value;
+
+   const editUsername = document.getElementById('addUserModalBg').dataset.editUsername;
+   const isEdit = !!editUsername;
+
+   if (!username || !role) {
+     document.getElementById('addUserError').textContent = 'กรุณากรอกชื่อผู้ใช้และเลือกบทบาท';
+     document.getElementById('addUserError').style.display = 'block';
+     return;
+   }
+
+   if (!isEdit) {
+     if (!password || !confirmPassword) {
+       document.getElementById('addUserError').textContent = 'กรุณากรอกรหัสผ่านและยืนยันรหัสผ่าน';
+       document.getElementById('addUserError').style.display = 'block';
+       return;
+     }
+     if (password !== confirmPassword) {
+       document.getElementById('addUserError').textContent = 'รหัสผ่านและยืนยันรหัสผ่านไม่ตรงกัน';
+       document.getElementById('addUserError').style.display = 'block';
+       return;
+     }
+     if (password.length < 6) {
+       document.getElementById('addUserError').textContent = 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร';
+       document.getElementById('addUserError').style.display = 'block';
+       return;
+     }
+   } else if (password && password.length < 6) {
+     document.getElementById('addUserError').textContent = 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร';
+     document.getElementById('addUserError').style.display = 'block';
+     return;
+   }
+
+   try {
+     const action = isEdit ? 'updateUser' : 'createUser';
+     const body = isEdit 
+       ? { action, username: currentUser.username, password: currentUser.password, targetUsername: editUsername, displayName, role }
+       : { action, username, password, role, pass: currentUser.password };
+
+     const resp = await fetch(APPS_SCRIPT_URL, {
+       method: 'POST',
+       redirect: 'follow',
+       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+       body: JSON.stringify(body)
+     });
+     if (!resp.ok) throw new Error('HTTP ' + resp.status);
+     const data = await resp.json();
+     if (data.status !== 'ok') throw new Error(data.message || 'บันทึกผู้ใช้ไม่สำเร็จ');
+
+     closeAddUserModal();
+     logEvent(isEdit ? 'update_user' : 'create_user', `${isEdit ? 'แก้ไข' : 'สร้าง'}ผู้ใช้: ${username}`);
+     loadUsersTable();
+     alert(`${isEdit ? 'แก้ไข' : 'สร้าง'}ผู้ใช้สำเร็จ`);
+   } catch(e) {
+     document.getElementById('addUserError').textContent = e.message || 'เกิดข้อผิดพลาด';
+     document.getElementById('addUserError').style.display = 'block';
+   }
+ }
+
+// ===== ROLES VIEW =====
+async function renderRolesTable() {
+  const tbody = document.getElementById('rolesTableBody');
+  tbody.innerHTML = '<tr><td colspan="2" class="loading-state"><span class="spinner-sm"></span>กำลังโหลด...</td></tr>';
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'getRoles', username: currentUser.username, password: currentUser.password })
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (data.status === 'ok') {
+      const roles = data.roles || [];
+      tbody.innerHTML = roles.map(role => {
+        const perms = role.permissions || [];
+        return `<tr>
+          <td><strong>${role.roleName}</strong></td>
+          <td style="font-size:12px;color:var(--text2)">${perms.join(', ') || 'ไม่มีสิทธิ์'}</td>
+        </tr>`;
+      }).join('');
+    } else {
+      throw new Error(data.message || 'ไม่สามารถโหลดข้อมูลบทบาท');
+    }
+  } catch(e) {
+    console.error('Load roles error:', e);
+    tbody.innerHTML = `<tr><td colspan="2" class="empty-state">❌ โหลดข้อมูลไม่สำเร็จ: ${e.message}</td></tr>`;
+  }
+}
+
+// ===== ENHANCED CHARTS =====
+let wingChartCache = [], hourlyChartCache = [], paymentChartCache = [];
+
+function drawWingDistributionChart() {
+  const canvas = document.getElementById('wingChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d', { alpha: true });
+  const w = canvas.width = canvas.offsetWidth || 400;
+  const h = canvas.height = 200;
+  ctx.clearRect(0, 0, w, h);
+
+  const wingCounts = {};
+  allRows.forEach(r => {
+    if (!r.ref || String(r.ref).trim() === '') return;
+    const wing = r.wing || 'ไม่ระบุ';
+    wingCounts[wing] = (wingCounts[wing] || 0) + 1;
+  });
+
+  const wings = Object.keys(wingCounts).sort();
+  const values = wings.map(w => wingCounts[w]);
+  const total = values.reduce((s, v) => s + v, 0);
+
+  if (total === 0) {
+    ctx.fillStyle = '#6B7280';
+    ctx.font = '13px Sarabun, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ยังไม่มีข้อมูลแดน', w / 2, h / 2);
+    return;
+  }
+
+  const colors = ['#0B2545', '#D4AF37', '#2E5238', '#8B0000', '#3B82F6', '#F97316', '#22C55E', '#DC2626'];
+  
+  const centerX = w / 2;
+  const centerY = h / 2 + 10;
+  const radius = Math.min(w, h - 40) / 2 - 10;
+  const innerRadius = radius * 0.5;
+
+  let startAngle = -Math.PI / 2;
+  wings.forEach((wing, i) => {
+    const pct = wingCounts[wing] / total;
+    const endAngle = startAngle + pct * 2 * Math.PI;
+    
+    ctx.beginPath();
+    ctx.moveTo(centerX + innerRadius * Math.cos(startAngle), centerY + innerRadius * Math.sin(startAngle));
+    ctx.lineTo(centerX + radius * Math.cos(startAngle), centerY + radius * Math.sin(startAngle));
+    ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+    ctx.lineTo(centerX + innerRadius * Math.cos(endAngle), centerY + innerRadius * Math.sin(endAngle));
+    ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true);
+    ctx.closePath();
+    
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    wingChartCache.push({
+      startAngle, endAngle, wing, count: wingCounts[wing],
+      color: colors[i % colors.length],
+      x: centerX, y: centerY
+    });
+    startAngle = endAngle;
+  });
+
+  canvas.addEventListener('mousemove', handleWingChartHover);
+  canvas.addEventListener('mouseleave', () => { canvas.title = ''; });
+}
+
+function handleWingChartHover(e) {
+  const canvas = e.target;
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+  const centerX = wingChartCache[0]?.x || canvas.width / 2;
+  const centerY = wingChartCache[0]?.y || canvas.height / 2;
+
+  for (const seg of wingChartCache) {
+    const angle = Math.atan2(mouseY - centerY, mouseX - centerX) + Math.PI / 2;
+    const startDeg = seg.startAngle * 180 / Math.PI;
+    const endDeg = seg.endAngle * 180 / Math.PI;
+    if (seg.wing) {
+      canvas.title = `${seg.wing}: ${seg.count} รายการ`;
+      canvas.style.cursor = 'pointer';
+      return;
+    }
+  }
+  canvas.style.cursor = 'default';
+  canvas.title = '';
+}
+
+function drawHourlyTrafficChart() {
+  const canvas = document.getElementById('hourlyChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d', { alpha: true });
+  const w = canvas.width = canvas.offsetWidth || 400;
+  const h = canvas.height = 200;
+  ctx.clearRect(0, 0, w, h);
+
+  const hourCounts = Array(24).fill(0);
+  allRows.forEach(r => {
+    if (!r.ref || String(r.ref).trim() === '') return;
+    const ts = r.timestamp ? new Date(r.timestamp.replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$2-$1')) : null;
+    if (ts && !isNaN(ts)) {
+      hourCounts[ts.getHours()]++;
+    }
+  });
+
+  const maxVal = Math.max(1, ...hourCounts);
+  const barW = Math.max(4, (w - 40) / 24);
+  hourlyChartCache = [];
+
+  ctx.fillStyle = '#0B2545';
+  hourCounts.forEach((count, hour) => {
+    const barH = (count / maxVal) * (h - 40);
+    const x = 20 + hour * barW;
+    const y = h - 20 - barH;
+    ctx.fillRect(x, y, barW - 1, barH);
+    
+    hourlyChartCache.push({ x, y, width: barW - 1, height: barH, hour, count });
+  });
+
+  ctx.fillStyle = '#3F4755';
+  ctx.font = '9px Sarabun, sans-serif';
+  ctx.textAlign = 'center';
+  for (let h = 0; h < 24; h += 2) {
+    ctx.fillText(h.toString().padStart(2, '0'), 20 + h * barW + barW / 2, h - 8);
+  }
+
+  canvas.addEventListener('mousemove', handleHourlyChartHover);
+  canvas.addEventListener('mouseleave', () => { canvas.title = ''; });
+}
+
+function handleHourlyChartHover(e) {
+  const canvas = e.target;
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  for (const bar of hourlyChartCache) {
+    if (mouseX >= bar.x && mouseX <= bar.x + bar.width && mouseY >= bar.y && mouseY <= bar.y + bar.height) {
+      canvas.title = `ชั่วโมง ${bar.hour.toString().padStart(2, '0')}: ${bar.count} รายการ`;
+      canvas.style.cursor = 'pointer';
+      return;
+    }
+  }
+  canvas.style.cursor = 'default';
+  canvas.title = '';
+}
+
+function drawPaymentStatusChart() {
+  const canvas = document.getElementById('paymentChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d', { alpha: true });
+  const w = canvas.width = canvas.offsetWidth || 400;
+  const h = canvas.height = 200;
+  ctx.clearRect(0, 0, w, h);
+
+  const paidCount = allRows.filter(r => normalizeStatus(r.status) === 'ชำระแล้ว' || normalizeStatus(r.status) === 'เสร็จสิ้น').length;
+  const unpaidCount = allRows.filter(r => normalizeStatus(r.status) === 'รอชำระเงิน').length;
+  const otherCount = allRows.filter(r => {
+    const s = normalizeStatus(r.status);
+    return !['ชำระแล้ว', 'เสร็จสิ้น', 'รอชำระเงิน'].includes(s);
+  }).length;
+
+  const labels = ['ชำระแล้ว', 'รอชำระ', 'อื่นๆ'];
+  const values = [paidCount, unpaidCount, otherCount];
+  const colors = ['#2E5238', '#D4AF37', '#6B7280'];
+  const total = values.reduce((s, v) => s + v, 0) || 1;
+
+  const legendEl = document.getElementById('paymentLegend');
+  if (legendEl) {
+    legendEl.innerHTML = labels.map((l, i) => `
+      <span class="finance-legend-item">
+        <span class="finance-legend-line" style="background:${colors[i]}"></span>
+        ${l}: ${values[i]} รายการ
+      </span>
+    `).join('');
+  }
+
+  const centerX = w / 2;
+  const centerY = h / 2;
+  const radius = Math.min(w, h) / 2 - 20;
+  const innerRadius = radius * 0.6;
+
+  let startAngle = -Math.PI / 2;
+  labels.forEach((label, i) => {
+    const pct = values[i] / total;
+    const endAngle = startAngle + pct * 2 * Math.PI;
+    
+    ctx.beginPath();
+    ctx.moveTo(centerX + innerRadius * Math.cos(startAngle), centerY + innerRadius * Math.sin(startAngle));
+    ctx.lineTo(centerX + radius * Math.cos(startAngle), centerY + radius * Math.sin(startAngle));
+    ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+    ctx.lineTo(centerX + innerRadius * Math.cos(endAngle), centerY + innerRadius * Math.sin(endAngle));
+    ctx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true);
+    ctx.closePath();
+    
+    ctx.fillStyle = colors[i];
+    ctx.fill();
+
+    paymentChartCache.push({
+      startAngle, endAngle, label, value: values[i],
+      color: colors[i], x: centerX, y: centerY
+    });
+    startAngle = endAngle;
+  });
+}
+
+// Update renderDashboardHome to include new charts
+function renderDashboardHome() {
+  // Role‑based KPI visibility
+  const role = currentUser && currentUser.role;
+  const visible = {
+    Superadmin: ['statTotal','statWait','statOk','statReject','statUniquePrisoners','statThisWeek','statThisMonth','statUniqueVisitors'],
+    Admin: ['statTotal','statWait','statOk','statReject','statUniquePrisoners','statThisWeek','statThisMonth','statUniqueVisitors'],
+    Vinai: ['statWait','statThisWeek'],
+    Tadtel: ['statOk','statThisWeek'],
+    Finance: ['statOk','statThisWeek','statUniqueVisitors']
+  }[role]||[];
+  // hide all KPI cards then show allowed
+  ['statTotal','statWait','statOk','statReject','statUniquePrisoners','statThisWeek','statThisMonth','statUniqueVisitors'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el && el.parentElement && el.parentElement.parentElement){
+      el.parentElement.parentElement.style.display = visible.includes(id)?'' : 'none';
+    }
+  });
+
+  // Show pipeline for admin roles
+  const pipeline = document.getElementById('approvalPipeline');
+  if(pipeline && (role === 'Superadmin' || role === 'Admin')) {
+    pipeline.style.display = 'block';
+  } else if(pipeline) {
+    pipeline.style.display = 'none';
+  }
+
+  const recentEl = document.getElementById('recentBookings');
+  if (!recentEl) return;
+
+  renderFinanceOverview();
+
+  const total = allRows.length;
+
+  // recent 5
+  if (!total) {
+    recentEl.innerHTML = '<div style="color:#888;font-size:12px">ยังไม่มีข้อมูล</div>';
+    document.getElementById('statUniquePrisoners').textContent = '0';
+    document.getElementById('statThisWeek').textContent = '0';
+    document.getElementById('statThisMonth').textContent = '0';
+    document.getElementById('statUniqueVisitors').textContent = '0';
+    const chartEl = document.getElementById('trendChart');
+    if (chartEl) chartEl.getContext && chartEl.getContext('2d').clearRect(0,0,chartEl.width,chartEl.height);
+    ['wingChart', 'hourlyChart', 'paymentChart'].forEach(id => {
+      const c = document.getElementById(id);
+      if (c) c.getContext && c.getContext('2d').clearRect(0,0,c.width,c.height);
+    });
+    return;
+  }
+
+  let rhtml = '';
+  allRows.slice(0, 5).forEach(r => {
+    const idx = allRows.indexOf(r);
+    const s = normalizeStatus(r.status);
+    let bcls = 'badge-pending-review';
+    if (s === 'รอชำระเงิน') bcls = 'badge-payment-pending';
+    else if (s === 'ชำระแล้ว') bcls = 'badge-paid';
+    else if (s === 'เสร็จสิ้น') bcls = 'badge-completed';
+    else if (s === 'ไม่อนุมัติ') bcls = 'badge-rejected';
+    else if (s === 'ยกเลิก') bcls = 'badge-cancelled';
+
+    rhtml += `<div onclick="viewDetail(${idx});switchView('reservations')" style="padding:10px 2px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <b style="font-size:13px;color:var(--blue)">${r.ref}</b>
+        <span class="badge ${bcls}" style="font-size:11px;padding:2px 8px;white-space:nowrap">${s}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;font-size:12px">
+        <span><strong style="color:var(--text2)">👤</strong> ${r.visitorName || ''}</span>
+        <span><strong style="color:var(--text2)">🏢</strong> ${r.prisonerName || ''} (#${r.prisonerId || ''})</span>
+        <span><strong style="color:var(--text2)">📅</strong> ${r.visitDate || ''} • <strong style="color:var(--blue)">${(r.total||0).toLocaleString()} บ.</strong></span>
+      </div>
+    </div>`;
+  });
+  
+  const recentCountEl = document.getElementById('recentCount');
+  if (recentCountEl) recentCountEl.textContent = '(' + allRows.length + ' รายการทั้งหมด)';
+  
+  recentEl.innerHTML = rhtml || '<div style="color:#888;font-size:13px;padding:12px;text-align:center">ยังไม่มีข้อมูล</div>';
+  
+  // Status Pipeline
+  const statusOrder = ['รอตรวจสอบวินัย', 'รอตรวจสอบผู้เข้าร่วม', 'รอชำระเงิน', 'ชำระแล้ว', 'เสร็จสิ้น', 'ไม่อนุมัติ', 'ยกเลิก'];
+  const statusLabels = {'รอตรวจสอบวินัย':'วินัย','รอตรวจสอบผู้เข้าร่วม':'ผู้เข้าร่วม','รอชำระเงิน':'ชำระเงิน','ชำระแล้ว':'ชำระแล้ว','เสร็จสิ้น':'เสร็จ','ไม่อนุมัติ':'ปฏิเสธ','ยกเลิก':'ยกเลิก'};
+  const statusCounts = {}; statusOrder.forEach(s => statusCounts[s] = 0);
+  allRows.forEach(r => { const s = normalizeStatus(r.status); if (statusCounts[s]!==undefined) statusCounts[s]++; });
+  const grandTotal = allRows.length;
+  let pipelineHtml = '<div class="status-pipeline">';
+  statusOrder.forEach(status => {
+    const pct = grandTotal ? Math.round(statusCounts[status]/grandTotal*100) : 0;
+    const colors = {'รอตรวจสอบวินัย':'var(--status-discipline)','รอตรวจสอบผู้เข้าร่วม':'var(--status-participant)','รอชำระเงิน':'var(--status-payment)','ชำระแล้ว':'var(--status-paid)','เสร็จสิ้น':'var(--status-completed)','ไม่อนุมัติ':'var(--status-rejected)','ยกเลิก':'var(--status-cancelled)'};
+    pipelineHtml += `<div class="status-pipeline-item" style="flex:1;min-width:55px;padding:6px 4px;border-radius:8px;background:${colors[status]}22;border:1px solid ${colors[status]}33;text-align:center">
+      <div style="font-size:10px;color:var(--text2);margin-bottom:2px">${statusLabels[status]}</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text)">${statusCounts[status]}</div>
+      <div style="font-size:9px;color:var(--text2)" class="status-pct">${pct}% ของทั้งหมด</div>
+    </div>`;
+  });
+  pipelineHtml += '</div>';
+  const pipelineEl = document.getElementById('statusPipeline');
+  if (pipelineEl) pipelineEl.innerHTML = pipelineHtml;
+
+  // Metrics
+  const uniquePrisoners = new Set();
+  const uniqueVisitors = new Set();
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  startOfWeek.setHours(0,0,0,0);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  let weekCount = 0, monthCount = 0;
+
+  allRows.forEach(r => {
+    if (r.prisonerId) uniquePrisoners.add(String(r.prisonerId).trim());
+    const vid = r.visitorId || r.visitorName;
+    if (vid) uniqueVisitors.add(String(vid).trim());
+
+    let visitKey = r.visitDateISO;
+    if (!visitKey && r.visitDate) {
+      const ts = r.timestamp ? new Date(r.timestamp.replace(/(\d+)\/(\d+)\/(\d+)/, '$3-$2-$1')) : null;
+      if (ts && !isNaN(ts)) visitKey = ts.toISOString().slice(0,10);
+    }
+    if (visitKey) {
+      const vDate = new Date(visitKey);
+      if (!isNaN(vDate)) {
+        if (vDate >= startOfWeek) weekCount++;
+        if (vDate >= startOfMonth) monthCount++;
+      }
+    }
+  });
+
+  const uniqueP = document.getElementById('statUniquePrisoners');
+  const thisWeekEl = document.getElementById('statThisWeek');
+  const thisMonthEl = document.getElementById('statThisMonth');
+  const uniqueV = document.getElementById('statUniqueVisitors');
+
+  if (uniqueP) uniqueP.textContent = uniquePrisoners.size;
+  if (thisWeekEl) thisWeekEl.textContent = weekCount;
+  if (thisMonthEl) thisMonthEl.textContent = monthCount;
+  if (uniqueV) uniqueV.textContent = uniqueVisitors.size;
+
+  // Last updated in header
+  const lastUpdatedEl = document.getElementById('overviewLastUpdated');
+  if (lastUpdatedEl) {
+    lastUpdatedEl.textContent = 'อัปเดต ' + new Date().toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' });
+  }
+
+  // Draw all charts
+  drawReservationTrendChart();
+  drawWingDistributionChart();
+  drawHourlyTrafficChart();
+  drawPaymentStatusChart();
+}
+
+// Update resize handler to redraw all charts
+window.addEventListener('resize', () => {
+  const homeView = document.getElementById('view-home');
+  if (homeView && homeView.style.display !== 'none') {
+    clearTimeout(window._trendResizeTimer);
+    window._trendResizeTimer = setTimeout(() => {
+      if (typeof drawReservationTrendChart === 'function') drawReservationTrendChart();
+      const financeCanvas = document.getElementById('financeChart');
+      if (financeCanvas && typeof drawFinanceLineChart === 'function') {
+        drawFinanceLineChart(financeCanvas, computeFinanceTimeSeries(allRows));
+      }
+      if (typeof drawWingDistributionChart === 'function') drawWingDistributionChart();
+      if (typeof drawHourlyTrafficChart === 'function') drawHourlyTrafficChart();
+      if (typeof drawPaymentStatusChart === 'function') drawPaymentStatusChart();
+    }, 120);
+  }
+});
+
+// Mobile touch support for wing, hourly, and payment charts (attach once)
+let wingChartTouchAttached = false;
+let hourlyChartTouchAttached = false;
+let paymentChartTouchAttached = false;
+
+function attachChartTouchSupport() {
+  // Wing chart
+  const wingCanvas = document.getElementById('wingChart');
+  if (wingCanvas && !wingChartTouchAttached) {
+    wingChartTouchAttached = true;
+    wingCanvas.addEventListener('click', (e) => {
+      if ('ontouchstart' in window) {
+        showChartTooltip(wingCanvas, wingChartCache, wingCanvas.getBoundingClientRect(), e.clientX, e.clientY);
+        setTimeout(hideChartTooltip, 2000);
+      }
+    });
+  }
+
+  // Hourly chart
+  const hourlyCanvas = document.getElementById('hourlyChart');
+  if (hourlyCanvas && !hourlyChartTouchAttached) {
+    hourlyChartTouchAttached = true;
+    hourlyCanvas.addEventListener('click', (e) => {
+      if ('ontouchstart' in window) {
+        showChartTooltip(hourlyCanvas, hourlyChartCache, hourlyCanvas.getBoundingClientRect(), e.clientX, e.clientY);
+        setTimeout(hideChartTooltip, 2000);
+      }
+    });
+  }
+
+  // Payment chart
+  const paymentCanvas = document.getElementById('paymentChart');
+  if (paymentCanvas && !paymentChartTouchAttached) {
+    paymentChartTouchAttached = true;
+    paymentCanvas.addEventListener('click', (e) => {
+      if ('ontouchstart' in window) {
+        showChartTooltip(paymentCanvas, paymentChartCache, paymentCanvas.getBoundingClientRect(), e.clientX, e.clientY);
+        setTimeout(hideChartTooltip, 2000);
+      }
+    });
+  }
+}
+
+// Attach touch support on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+  attachChartTouchSupport();
+});

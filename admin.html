@@ -40,33 +40,36 @@
       <div id="userName" style="opacity:0.8;"></div>
     </div>
 <nav class="sb-nav">
-       <a class="sb-link active" data-view="home" onclick="switchView('home');return false">🏠 <span class="sb-text">ภาพรวม</span></a>
-       <a class="sb-link" data-view="reservations" onclick="switchView('reservations');return false">📋 <span class="sb-text">รายการจอง</span></a>
-       <a class="sb-link" data-view="reports" onclick="switchView('reports');return false">📊 <span class="sb-text">รายงาน</span></a>
-       <a class="sb-link" data-view="eventlog" onclick="switchView('eventlog');return false">📝 <span class="sb-text">บันทึกการทำงาน</span></a>
-     </nav>
+        <a class="sb-link active" data-view="home" onclick="switchView('home');return false">🏠 <span class="sb-text">ภาพรวม</span></a>
+        <a class="sb-link" data-view="reservations" onclick="switchView('reservations');return false">📋 <span class="sb-text">รายการจอง</span></a>
+        <a class="sb-link" data-view="visitors" onclick="switchView('visitors');return false">👥 <span class="sb-text">ผู้เยี่ยม</span></a>
+        <a class="sb-link" data-view="users" onclick="switchView('users');return false">👤 <span class="sb-text">ผู้ใช้</span></a>
+        <a class="sb-link" data-view="roles" onclick="switchView('roles');return false">🏷️ <span class="sb-text">บทบาท</span></a>
+        <a class="sb-link" data-view="reports" onclick="switchView('reports');return false">📊 <span class="sb-text">รายงาน</span></a>
+        <a class="sb-link" data-view="eventlog" onclick="switchView('eventlog');return false">📝 <span class="sb-text">บันทึกการทำงาน</span></a>
+        <a class="sb-link" data-view="settings" onclick="switchView('settings');return false">⚙️ <span class="sb-text">ตั้งค่า</span></a>
+      </nav>
     <div class="sb-bottom">
       <button onclick="doLogout()" style="width:100%;padding:7px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;font-size:12px;cursor:pointer;font-family:inherit">ออกจากระบบ</button>
     </div>
 </div>
-   
-    <!-- MAIN CONTENT -->
-    <div class="content-area">
-      <div class="topbar">
-       <div>
-         <h1 id="topTitle">🏛️ ระบบตรวจสอบการจองเยี่ยม</h1>
-         <div style="font-size:12px;opacity:0.8">ทัณฑสถานบำบัดพิเศษกลาง</div>
-       </div>
-       <div class="topbar-right">
-         <span id="topDate" style="font-size:13px;opacity:0.85"></span>
-       </div>
-     </div>
+       
+     <!-- MAIN CONTENT -->
+     <div class="content-area">
+       <div class="topbar">
+        <div>
+          <h1 id="topTitle">🏛️ ระบบตรวจสอบการจองเยี่ยม</h1>
+          <div style="font-size:12px;opacity:0.8">ทัณฑสถานบำบัดพิเศษกลาง</div>
+        </div>
+        <div class="topbar-right">
+          <span id="topDate" style="font-size:13px;opacity:0.85"></span>
+        </div>
+      </div>
 
-    <div class="main">
-      <!-- HOME DASHBOARD VIEW -->
-      <div id="view-home" class="view">
-        <!-- Professional Header -->
-        <div class="overview-header">
+<div class="main">
+       <!-- HOME DASHBOARD VIEW -->
+       <div id="view-home" class="view">
+         <div class="overview-header">
           <div>
             <h2>ภาพรวม • ตัวชี้วัดสด</h2>
             <div class="overview-subtitle">ข้อมูลอัปเดตเรียลไทม์จากระบบจอง</div>
@@ -93,7 +96,6 @@
           </div>
         </div>
 
-        <!-- Secondary Metrics (Contextual) -->
         <div class="metrics-row secondary">
           <div class="stat-card">
             <div class="stat-label">👥 ผู้ต้องขังไม่ซ้ำ</div>
@@ -113,8 +115,7 @@
           </div>
         </div>
 
-        <!-- Visualizations -->
-<div class="dash-grid">
+        <div class="dash-grid">
            <div class="dash-card">
              <div class="dash-card-h">
                <span>💰</span> ภาพรวมการเงิน
@@ -138,13 +139,32 @@
              </div>
              <canvas id="trendChart" style="width:100%;height:200px;display:block;margin-top:8px" aria-label="กราฟแนวโน้มการจอง"></canvas>
            </div>
+           <div class="dash-card">
+             <div class="dash-card-h">
+               <span>🏢</span> แดนที่เยี่ยม
+             </div>
+             <canvas id="wingChart" style="width:100%;height:200px;display:block;margin-top:8px" aria-label="กราฟแดนที่เยี่ยม"></canvas>
+           </div>
+           <div class="dash-card">
+             <div class="dash-card-h">
+               <span>⏰</span> ชั่วโมงการจอง
+             </div>
+             <canvas id="hourlyChart" style="width:100%;height:200px;display:block;margin-top:8px" aria-label="กราฟชั่วโมงการจอง"></canvas>
+           </div>
+           <div class="dash-card">
+             <div class="dash-card-h">
+               <span>💳</span> สถานะการชำระเงิน
+             </div>
+             <canvas id="paymentChart" style="width:100%;height:200px;display:block;margin-top:8px" aria-label="กราฟสถานะการชำระเงิน"></canvas>
+             <div id="paymentLegend" class="finance-chart-legend" style="margin-top:8px"></div>
+           </div>
            <div class="dash-card" style="grid-column: 1 / -1">
              <div class="dash-card-h"><span>📋</span> การจองล่าสุด <span id="recentCount" style="font-size:12px;color:var(--text2);font-weight:400"></span></div>
              <div id="recentBookings" style="margin-top:8px"></div>
            </div>
 </div>
 
-      </div>
+       </div>
 
       <!-- RESERVATIONS VIEW -->
       <div id="view-reservations" class="view" style="display:none" role="main">
@@ -252,11 +272,160 @@
             </table>
           </div>
         </div>
-      </div>
-      
-    </div>
-  </div>
 </div>
+      
+<!-- VISITORS VIEW -->
+        <div id="view-visitors" class="view" style="display:none">
+          <div style="margin-bottom:12px">
+            <h1 style="font-size:20px;font-weight:700;margin-bottom:4px">👥 ผู้เยี่ยม</h1>
+            <div style="font-size:13px;color:var(--text2)">จัดการข้อมูลผู้เยี่ยมทั้งหมดในระบบ</div>
+          </div>
+          
+<div class="controls" style="margin-bottom:16px">
+             <input class="search-box" id="visitorsSearchBox" type="text" placeholder="🔍 ค้นหา ชื่อ / บัตรประชาชน / อีเมล" aria-label="ค้นหาผู้เยี่ยม" oninput="renderVisitorsTable()">
+             <button class="refresh-btn" onclick="loadVisitors()">🔄 โหลดใหม่</button>
+             <button class="btn-print superadmin-only" onclick="openAddVisitorModal()" style="margin-left:8px">➕ เพิ่มผู้เยี่ยม</button>
+             <button class="btn-refresh superadmin-only" onclick="openSearchBookingModal()" style="margin-left:8px">🔍 ค้นหาการจองเพื่อเพิ่มผู้เยี่ยม</button>
+           </div>
+          
+          <div class="table-wrap">
+            <div class="table-header">
+              <h2>รายการผู้เยี่ยมทั้งหมด</h2>
+              <span class="table-count" id="visitorsTableCount">0 รายการ</span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>ชื่อ</th>
+                  <th>บัตรประชาชน</th>
+                  <th class="hide-mobile">โทรศัพท์</th>
+                  <th class="hide-mobile">อีเมล</th>
+                  <th class="hide-mobile">ความสัมพันธ์</th>
+                  <th>การกระทำ</th>
+                </tr>
+              </thead>
+              <tbody id="visitorsTableBody">
+                <tr><td colspan="6" class="loading-state"><span class="spinner-sm"></span>กำลังโหลด...</td></tr>
+              </tbody>
+            </table>
+            <div id="visitorsPagination" class="pagination"></div>
+          </div>
+        </div>
+        
+        <!-- SEARCH BOOKING FOR EXTRA VISITOR MODAL -->
+        <div class="modal-bg" id="searchBookingModalBg" onclick="closeSearchBookingModal(event)">
+          <div class="modal modal-detail">
+            <div class="modal-head">
+              <h3>🔍 ค้นหาการจองเพื่อเพิ่มผู้เยี่ยม</h3>
+              <button class="modal-close" onclick="closeSearchBookingModal()">×</button>
+            </div>
+            <div class="modal-body">
+              <div style="margin-bottom:12px">
+                <input class="search-box" id="searchBookingInput" type="text" placeholder="🔍 ค้นหา เลขอ้างอิง / ชื่อผู้เยี่ยม / ผู้ต้องขัง" style="width:100%" oninput="filterBookingsForExtraVisitor()">
+              </div>
+              <div style="max-height:400px;overflow-y:auto">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>เลขอ้างอิง</th>
+                      <th>ผู้เยี่ยม</th>
+                      <th>แดน</th>
+                      <th>จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="addExtraVisitorBookingsBody">
+                    <tr><td colspan="4" class="loading-state"><span class="spinner-sm"></span>กำลังโหลด...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+       <!-- USERS VIEW -->
+       <div id="view-users" class="view" style="display:none">
+         <div style="margin-bottom:12px">
+           <h1 style="font-size:20px;font-weight:700;margin-bottom:4px">👤 ผู้ใช้</h1>
+           <div style="font-size:13px;color:var(--text2)">จัดการผู้ใช้งานระบบ</div>
+         </div>
+         
+<div class="controls" style="margin-bottom:16px">
+            <input class="search-box" id="usersSearchBox" type="text" placeholder="🔍 ค้นหาชื่อผู้ใช้" aria-label="ค้นหาผู้ใช้" oninput="renderUsersTable()">
+            <button class="refresh-btn" onclick="loadUsersTable()">🔄 โหลดใหม่</button>
+            <button class="btn-print superadmin-only" onclick="openAddUserModal()" style="margin-left:8px">➕ เพิ่มผู้ใช้</button>
+          </div>
+         
+         <div class="table-wrap">
+           <div class="table-header">
+             <h2>รายการผู้ใช้ทั้งหมด</h2>
+             <span class="table-count" id="usersTableCount">0 รายการ</span>
+           </div>
+           <table>
+             <thead>
+               <tr>
+                 <th>ชื่อผู้ใช้</th>
+                 <th>ชื่อแสดง</th>
+                 <th>บทบาท</th>
+                 <th>สถานะ</th>
+                 <th>การกระทำ</th>
+               </tr>
+             </thead>
+             <tbody id="usersTableBody">
+               <tr><td colspan="5" class="loading-state"><span class="spinner-sm"></span>กำลังโหลด...</td></tr>
+             </tbody>
+           </table>
+         </div>
+       </div>
+
+       <!-- ROLES VIEW -->
+       <div id="view-roles" class="view" style="display:none">
+         <div style="margin-bottom:12px">
+           <h1 style="font-size:20px;font-weight:700;margin-bottom:4px">🏷️ บทบาท</h1>
+           <div style="font-size:13px;color:var(--text2)">ข้อมูลบทบาทและสิทธิ์การใช้งาน</div>
+         </div>
+         
+         <div class="table-wrap">
+           <div class="table-header">
+             <h2>บทบาททั้งหมด</h2>
+           </div>
+           <table>
+             <thead>
+               <tr>
+                 <th>ชื่อบทบาท</th>
+                 <th>สิทธิ์การใช้งาน</th>
+               </tr>
+             </thead>
+             <tbody id="rolesTableBody">
+               <tr><td colspan="2" class="loading-state">กำลังโหลด...</td></tr>
+             </tbody>
+           </table>
+         </div>
+       </div>
+
+       <!-- SETTINGS VIEW -->
+       <div id="view-settings" class="view" style="display:none">
+         <div style="margin-bottom:12px">
+           <h1 style="font-size:20px;font-weight:700;margin-bottom:4px">⚙️ ตั้งค่า</h1>
+           <div style="font-size:13px;color:var(--text2)">จัดการข้อมูลส่วนตัวและการตั้งค่า</div>
+         </div>
+         
+         <div class="controls" style="margin-bottom:16px">
+           <button class="refresh-btn" onclick="openChangePasswordModal()" style="margin-left:8px">🔐 เปลี่ยนรหัสผ่าน</button>
+         </div>
+         
+         <div style="display:flex;flex-direction:column;gap:16px;max-width:500px">
+           <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+             <div style="font-weight:600;margin-bottom:8px">ข้อมูลส่วนตัว</div>
+             <div style="font-size:14px;margin-bottom:4px"><strong>ชื่อผู้ใช้:</strong> <span id="settingsUsername">-</span></div>
+             <div style="font-size:14px;margin-bottom:4px"><strong>ชื่อแสดง:</strong> <span id="settingsDisplayName">-</span></div>
+             <div style="font-size:14px"><strong>บทบาท:</strong> <span id="settingsRole">-</span></div>
+           </div>
+         </div>
+       </div>
+       
+     </div>
+   </div>
+ </div>
 
 <!-- Slip Modal -->
 <div class="modal-bg" id="modalBg" onclick="closeModal(event)">
@@ -280,6 +449,115 @@
   </div>
 </div>
 
+<!-- Add Visitor Modal -->
+<div class="modal-bg" id="addVisitorModalBg" onclick="closeAddVisitorModal(event)">
+  <div class="modal modal-detail">
+    <div class="modal-head">
+      <h3>➕ เพิ่มผู้เยี่ยม</h3>
+      <button class="modal-close" onclick="closeAddVisitorModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="addVisitorError" style="color:var(--red);font-size:13px;margin-bottom:8px;display:none"></div>
+      <div style="display:grid;gap:12px">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">ชื่อ-นามสกุล *</label>
+          <input type="text" id="addVisitorName" class="search-box" placeholder="ชื่อ-นามสกุล" style="width:100%">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">บัตรประชาชน *</label>
+          <input type="text" id="addVisitorIdCard" class="search-box" placeholder="เลขบัตรประชาชน" style="width:100%">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">โทรศัพท์</label>
+          <input type="text" id="addVisitorPhone" class="search-box" placeholder="เบอร์โทรศัพท์" style="width:100%">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">อีเมล</label>
+          <input type="email" id="addVisitorEmail" class="search-box" placeholder="อีเมล" style="width:100%">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">ความสัมพันธ์กับผู้ต้องขัง</label>
+          <input type="text" id="addVisitorRelation" class="search-box" placeholder="เช่น บุตร / ธิดา" style="width:100%">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+        <button class="btn-cancel" onclick="closeAddVisitorModal()" style="padding:8px 16px">ยกเลิก</button>
+        <button class="btn-approve" onclick="saveNewVisitor()" style="padding:8px 16px">บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit User Modal -->
+<div class="modal-bg" id="addUserModalBg" onclick="closeAddUserModal(event)">
+  <div class="modal modal-detail">
+    <div class="modal-head">
+      <h3 id="addUserModalTitle">➕ เพิ่มผู้ใช้</h3>
+      <button class="modal-close" onclick="closeAddUserModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="addUserError" style="color:var(--red);font-size:13px;margin-bottom:8px;display:none"></div>
+      <div style="display:grid;gap:12px">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">ชื่อผู้ใช้ *</label>
+          <input type="text" id="addUserUsername" class="search-box" placeholder="ชื่อผู้ใช้" style="width:100%">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">ชื่อแสดง</label>
+          <input type="text" id="addUserDisplayName" class="search-box" placeholder="ชื่อแสดง" style="width:100%">
+        </div>
+<div>
+           <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">รหัสผ่าน *</label>
+           <input type="password" id="addUserPassword" class="search-box" placeholder="รหัสผ่าน (อย่างน้อย 6 ตัวอักษร)" style="width:100%">
+         </div>
+         <div>
+           <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">ยืนยันรหัสผ่าน *</label>
+           <input type="password" id="addUserConfirmPassword" class="search-box" placeholder="ยืนยันรหัสผ่าน" style="width:100%">
+         </div>
+         <div>
+           <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">บทบาท *</label>
+           <select id="addUserRole" class="filter-select" style="width:100%"></select>
+         </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+        <button class="btn-cancel" onclick="closeAddUserModal()" style="padding:8px 16px">ยกเลิก</button>
+        <button class="btn-approve" onclick="saveNewUser()" style="padding:8px 16px">บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-bg" id="changePasswordModalBg" onclick="closeChangePasswordModal(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>🔐 เปลี่ยนรหัสผ่าน</h3>
+      <button class="modal-close" onclick="closeChangePasswordModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="changePasswordError" style="color:var(--red);font-size:13px;margin-bottom:8px;display:none"></div>
+      <div style="display:grid;gap:12px">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">รหัสผ่านปัจจุบัน *</label>
+          <input type="password" id="currentPassword" class="search-box" placeholder="รหัสผ่านปัจจุบัน" style="width:100%">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">รหัสผ่านใหม่ *</label>
+          <input type="password" id="newPassword" class="search-box" placeholder="รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)" style="width:100%">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">ยืนยันรหัสผ่านใหม่ *</label>
+          <input type="password" id="confirmPassword" class="search-box" placeholder="ยืนยันรหัสผ่านใหม่" style="width:100%">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+        <button class="btn-cancel" onclick="closeChangePasswordModal()" style="padding:8px 16px">ยกเลิก</button>
+        <button class="btn-approve" onclick="changePassword()" style="padding:8px 16px">เปลี่ยนรหัสผ่าน</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="src/js/admin.js" defer></script>
   
   <!-- Bottom Navigation for Mobile -->
@@ -293,7 +571,68 @@
   <!-- Pull to refresh indicator (mobile) -->
   <div class="pull-refresh" id="pullRefresh">⟳ ปล่อยเพื่อรีเฟรช</div>
   
-  <script>
+<!-- Add Extra Visitor to Booking Modal -->
+<div class="modal-bg" id="addExtraVisitorModalBg" onclick="closeAddExtraVisitorModal(event)">
+  <div class="modal modal-detail">
+    <div class="modal-head">
+      <h3>👥 เพิ่มผู้เยี่ยมในการจอง</h3>
+      <button class="modal-close" onclick="closeAddExtraVisitorModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="addExtraVisitorError" style="color:var(--red);font-size:13px;margin-bottom:8px;display:none"></div>
+      <div style="margin-bottom:12px;padding:8px;background:var(--bg2);border-radius:var(--radius-sm)">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:2px">เลขอ้างอิงการจอง</div>
+        <div style="font-weight:600;color:var(--blue)" id="addExtraVisitorBookingRef">—</div>
+      </div>
+      <div id="addExtraVisitorBookingDetails" style="margin-bottom:12px;padding:10px;background:var(--bg2);border-radius:var(--radius-sm);display:none">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:4px">ข้อมูลการจอง</div>
+        <div id="addExtraVisitorVisitorInfo" style="font-size:13px;margin-bottom:6px"></div>
+        <div id="addExtraVisitorPrisonerInfo" style="font-size:13px;margin-bottom:6px"></div>
+        <div id="addExtraVisitorDateInfo" style="font-size:13px;color:var(--text2)"></div>
+      </div>
+      <div style="display:grid;gap:12px">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">ชื่อ-นามสกุล *</label>
+          <input type="text" id="addExtraVisitorName" class="search-box" placeholder="ชื่อ-นามสกุล" style="width:100%">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">บัตรประชาชน *</label>
+          <input type="text" id="addExtraVisitorIdCard" class="search-box" placeholder="เลขบัตรประชาชน" style="width:100%">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">ความสัมพันธ์กับผู้ต้องขัง *</label>
+          <select id="addExtraVisitorRelation" class="filter-select" style="width:100%">
+            <option value="">เลือกความสัมพันธ์</option>
+            <option value="บุตร / ธิดา">บุตร / ธิดา</option>
+            <option value="คู่สมรส">คู่สมรส</option>
+            <option value="บิดา / มารดา">บิดา / มารดา</option>
+            <option value="พี่น้อง">พี่น้อง</option>
+            <option value="ญาติ">ญาติ</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">อายุ (ปี) *</label>
+          <input type="number" id="addExtraVisitorAge" class="search-box" placeholder="อายุ" min="0" max="120" style="width:100%">
+          <div style="font-size:11px;color:var(--text2);margin-top:4px">
+            💡 อัตโนมัติคำนวณค่าบริการ: 
+            <span style="color:var(--blue)">&lt;5 ปี: ฟรี</span> | 
+            <span style="color:var(--text)">5-8 ปี: 500 บาท</span> | 
+            <span style="color:var(--blue)">&gt;8 ปี: 1000 บาท</span>
+          </div>
+        </div>
+        <div id="addExtraVisitorPricePreview" style="display:none;padding:8px;background:var(--gold-light);border-radius:var(--radius-sm);font-size:13px">
+          <span style="color:var(--text2)">เพิ่มค่าบริการ:</span> <strong id="extraVisitorPriceAmount" style="color:var(--blue)">0 บาท</strong>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+        <button class="btn-cancel" onclick="closeAddExtraVisitorModal()" style="padding:8px 16px">ยกเลิก</button>
+        <button class="btn-approve" onclick="saveExtraVisitor()" style="padding:8px 16px">บันทึก</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
 // Show bottom nav on mobile
 if (window.innerWidth <= 768) {
   document.getElementById('bottomNav').style.display = 'flex';
@@ -302,7 +641,22 @@ window.addEventListener('resize', () => {
   const bottomNav = document.getElementById('bottomNav');
   if (bottomNav) bottomNav.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
 });
-  </script>
+
+// Auto-calculate price when age changes
+const extraVisitorAgeInput = document.getElementById('addExtraVisitorAge');
+if (extraVisitorAgeInput) {
+  extraVisitorAgeInput.addEventListener('input', function() {
+    const age = parseInt(this.value) || 0;
+    const pricePreview = document.getElementById('addExtraVisitorPricePreview');
+    const priceAmount = document.getElementById('extraVisitorPriceAmount');
+    let price = 0;
+    if (age >= 5 && age <= 8) price = 500;
+    else if (age > 8) price = 1000;
+    pricePreview.style.display = age > 0 ? 'block' : 'none';
+    priceAmount.textContent = price.toLocaleString() + ' บาท';
+  });
+}
+</script>
   
   <div style="text-align:center;padding:8px;font-size:10px;color:#6B7280;background:#FDFBF7;">
     กรมราชทัณฑ์ · <a href="https://main.correct.go.th" target="_blank" rel="noopener" style="color:#0B2545;">main.correct.go.th</a>
